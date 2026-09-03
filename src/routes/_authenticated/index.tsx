@@ -1,11 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { Lock } from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   carregarPainel,
   criarCliente,
@@ -76,7 +77,6 @@ const dataBR = (iso: string) => {
 const dataHoraBR = dataHoraSP;
 
 function Painel() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const buscar = useServerFn(carregarPainel);
   const fnCliente = useServerFn(criarCliente);
@@ -166,24 +166,16 @@ function Painel() {
 
   const hoje = hojeSP();
 
-  async function sair() {
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" });
-  }
-
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <main className="mx-auto max-w-5xl px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Cobrança Certa</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Painel</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lembretes de pagamento para serviços pontuais.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" asChild>
-            <Link to="/admin">Operação</Link>
-          </Button>
           <Dialog open={clienteAberto} onOpenChange={setClienteAberto}>
             <DialogTrigger asChild>
               <Button variant="outline">Novo cliente</Button>
@@ -280,10 +272,6 @@ function Painel() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <Button variant="ghost" onClick={sair}>
-            Sair
-          </Button>
         </div>
       </header>
 
@@ -326,9 +314,24 @@ function Painel() {
           <p className="text-sm text-muted-foreground">
             Disparo manual durante a validação: o envio automático diário entra depois desta fase.
           </p>
-          <Button variant="secondary" onClick={() => mRodar.mutate()} disabled={mRodar.isPending}>
-            {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => mRodar.mutate()} disabled={mRodar.isPending}>
+              {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
+            </Button>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="inline-flex">
+                    <Button variant="outline" disabled className="gap-2">
+                      <Lock className="size-4" />
+                      Enviar para o WhatsApp
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Em breve</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </section>
       </BlurFade>
 
@@ -391,7 +394,7 @@ function Painel() {
       </BlurFade>
 
       <BlurFade inView className="mt-10 block">
-        <h2 className="text-lg font-medium text-foreground">Log de envios</h2>
+        <h2 className="text-lg font-medium text-foreground">Rastreio dos envios</h2>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card">
           <Table>
             <TableHeader>

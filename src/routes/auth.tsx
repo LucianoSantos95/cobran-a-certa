@@ -27,16 +27,52 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.76c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.15-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.85 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.67-2.84Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.67 2.84C6.71 7.31 9.14 5.38 12 5.38Z"
+      />
+    </svg>
+  );
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [google, setGoogle] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/" });
-    });
+    const decidir = async (session: { user: { email?: string } } | null) => {
+      if (!session) return;
+      const e = (session.user.email ?? "").toLowerCase();
+      if (e === EMAIL_AUTORIZADO) {
+        navigate({ to: "/" });
+      } else {
+        await supabase.auth.signOut();
+        toast.error("Acesso restrito", {
+          description: "Apenas a conta autorizada pode entrar nesta fase.",
+        });
+      }
+    };
+    supabase.auth.getSession().then(({ data }) => decidir(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => decidir(session));
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   async function entrar(e: React.FormEvent) {
@@ -64,49 +100,124 @@ function AuthPage() {
     navigate({ to: "/" });
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Cobrança Certa</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Acesso restrito durante a fase de validação.
-        </p>
+  async function entrarComGoogle() {
+    setGoogle(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (error) {
+      setGoogle(false);
+      toast.error("Não foi possível abrir o Google", { description: error.message });
+    }
+  }
 
-        <form onSubmit={entrar} className="mt-8 space-y-4 rounded-xl border bg-card p-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="voce@exemplo.com"
-              required
-              maxLength={255}
-            />
+  return (
+    <main className="grid min-h-svh lg:grid-cols-2">
+      <div className="flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+              CC
+            </span>
+            <span className="font-semibold tracking-tight">Cobrança Certa</span>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="senha">Senha</Label>
-            <Input
-              id="senha"
-              type="password"
-              autoComplete="current-password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-              minLength={6}
-              maxLength={72}
-            />
+
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Entrar</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Acesso restrito durante a fase de validação.
+          </p>
+
+          <form onSubmit={entrar} className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@exemplo.com"
+                required
+                maxLength={255}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="senha">Senha</Label>
+              <Input
+                id="senha"
+                type="password"
+                autoComplete="current-password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+                minLength={6}
+                maxLength={72}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={carregando || google}>
+              {carregando ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs tracking-wide text-muted-foreground uppercase">
+              ou continue com
+            </span>
+            <span className="h-px flex-1 bg-border" />
           </div>
-          <Button type="submit" className="w-full" disabled={carregando}>
-            {carregando ? "Entrando..." : "Entrar"}
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={entrarComGoogle}
+            disabled={carregando || google}
+          >
+            <GoogleIcon className="size-4" />
+            {google ? "Abrindo o Google..." : "Google"}
           </Button>
-          <p className="text-xs text-muted-foreground">
+
+          <p className="mt-6 text-xs text-muted-foreground">
             Sem cadastro público. Apenas a conta autorizada tem acesso nesta fase.
           </p>
-        </form>
+        </div>
       </div>
+
+      <aside className="relative hidden overflow-hidden bg-primary text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.15]"
+          style={{
+            backgroundImage:
+              "radial-gradient(currentColor 1px, transparent 1px), radial-gradient(currentColor 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+            backgroundPosition: "0 0, 14px 14px",
+          }}
+        />
+        <div className="relative flex items-center gap-2">
+          <span className="grid size-7 place-items-center rounded-md bg-primary-foreground text-xs font-bold text-primary">
+            CC
+          </span>
+          <span className="font-semibold tracking-tight">Cobrança Certa</span>
+        </div>
+        <div className="relative">
+          <p className="text-2xl leading-snug font-semibold tracking-tight">
+            Lembretes de cobrança que recuperam o que é seu.
+          </p>
+          <ul className="mt-6 space-y-2 text-sm text-primary-foreground/80">
+            <li>• Lembrete no vencimento, cobrança firme depois — sem você redigir nada.</li>
+            <li>• Acompanhe o que foi enviado e o que voltou como pagamento.</li>
+            <li>• Feito para serviço pontual, não para assinatura recorrente.</li>
+          </ul>
+        </div>
+        <p className="relative text-xs text-primary-foreground/60">
+          Fase de validação · uso interno
+        </p>
+      </aside>
     </main>
   );
 }

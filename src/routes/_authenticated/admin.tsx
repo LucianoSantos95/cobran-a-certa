@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -125,20 +125,12 @@ function Admin() {
   const { data, isLoading } = useQuery({ queryKey: ["admin"], queryFn: () => buscar() });
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Operação</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Visão agregada da base — só você vê esta tela.
-          </p>
-        </div>
-        <Link
-          to="/"
-          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          ← Voltar às cobranças
-        </Link>
+    <main className="mx-auto max-w-5xl px-4 py-8">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Operação</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Visão agregada da base — só você vê esta tela.
+        </p>
       </header>
 
       <BlurFade className="mt-8 block">

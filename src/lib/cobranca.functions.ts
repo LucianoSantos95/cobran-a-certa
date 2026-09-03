@@ -262,6 +262,13 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     const mapaCliente = new Map((clientes ?? []).map((c) => [c.id, c]));
 
+    const { data: perfil } = await supabase
+      .from("perfil_cobranca")
+      .select("instrucoes_pagamento")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const instrucoesPagamento = perfil?.instrucoes_pagamento ?? "";
+
     const pendentesDeEnvio: { cobrancaId: string; tipo: TipoEnvio }[] = [];
     for (const c of cobrancas ?? []) {
       const naJanelaDoLembrete = c.vencimento <= hoje && c.vencimento > seteDiasAtras;
@@ -303,6 +310,7 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
           vencimento: cobranca.vencimento,
           tipo: item.tipo,
           cobrancaId: cobranca.id,
+          instrucoesPagamento,
         });
         enviados += 1;
       } catch (e) {

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { EMAIL_AUTORIZADO } from "@/lib/acesso";
+import { AppNav } from "@/components/layout/app-nav";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -13,5 +14,15 @@ export const Route = createFileRoute("/_authenticated")({
     }
     return { user: data.user };
   },
-  component: () => <Outlet />,
+  component: RouteComponent,
 });
+
+function RouteComponent() {
+  const { user } = Route.useRouteContext();
+  return (
+    <div className="min-h-svh bg-background">
+      <AppNav email={user.email ?? ""} />
+      <Outlet />
+    </div>
+  );
+}

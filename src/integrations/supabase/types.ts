@@ -117,6 +117,24 @@ export type Database = {
           },
         ]
       }
+      perfil_cobranca: {
+        Row: {
+          atualizado_em: string
+          instrucoes_pagamento: string
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          instrucoes_pagamento?: string
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          instrucoes_pagamento?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -17,6 +17,7 @@ interface Props {
   valorFormatado?: string;
   vencimentoFormatado?: string;
   diasAtraso?: number;
+  instrucoesPagamento?: string;
   remetente?: string;
 }
 
@@ -25,6 +26,7 @@ const Email = ({
   valorFormatado = "—",
   vencimentoFormatado = "—",
   diasAtraso,
+  instrucoesPagamento,
   remetente = "Cobrança Certa",
 }: Props) => (
   <Html lang="pt-BR" dir="ltr">
@@ -43,6 +45,14 @@ const Email = ({
           <Text style={label}>Venceu em</Text>
           <Text style={value}>{vencimentoFormatado}</Text>
         </Section>
+        {instrucoesPagamento ? (
+          <Section style={box}>
+            <Text style={label}>Como pagar</Text>
+            <Text style={{ ...text, whiteSpace: "pre-line", margin: 0 }}>
+              {instrucoesPagamento}
+            </Text>
+          </Section>
+        ) : null}
         <Text style={text}>
           Pedimos a gentileza de regularizar o pagamento o quanto antes. Caso já tenha pago,
           responda este e-mail para darmos baixa.
@@ -64,6 +74,7 @@ export const template = {
     valorFormatado: "R$ 1.200,00",
     vencimentoFormatado: "08/09/2026",
     diasAtraso: 7,
+    instrucoesPagamento: "Pix (chave e-mail): voce@exemplo.com",
   },
 } satisfies TemplateEntry;
 

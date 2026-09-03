@@ -5,20 +5,18 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system definition.
+ * Sistema visual — base neutra (slate) no espírito do shadcn-admin, fonte Inter.
  *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * :root = tema claro; .dark = tema escuro (tokens prontos, sem toggle na UI
+ * ainda). Todas as cores em oklch. Para adicionar uma cor semântica: declare
+ * em :root e .dark, e registre em @theme inline como --color-<nome>.
  */
 
 @theme inline {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -63,31 +61,30 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.986 0.004 106.4);
-  --foreground: oklch(0.22 0.015 160);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.015 160);
+  --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.015 160);
-  --primary: oklch(0.42 0.072 172);
-  --primary-foreground: oklch(0.985 0.005 106);
-  --secondary: oklch(0.955 0.012 150);
-  --secondary-foreground: oklch(0.3 0.04 172);
-  --muted: oklch(0.958 0.006 106);
-  --muted-foreground: oklch(0.52 0.018 160);
-  --accent: oklch(0.945 0.02 160);
-  --accent-foreground: oklch(0.3 0.04 172);
-  --destructive: oklch(0.56 0.185 25);
-  --destructive-foreground: oklch(0.985 0.005 106);
-  --border: oklch(0.918 0.008 130);
-  --input: oklch(0.918 0.008 130);
-  --ring: oklch(0.62 0.05 172);
-  /* Paleta coordenada com o primary (verde-petróleo) + um acento âmbar. */
-  --chart-1: oklch(0.42 0.072 172);
-  --chart-2: oklch(0.58 0.09 168);
-  --chart-3: oklch(0.72 0.06 158);
-  --chart-4: oklch(0.34 0.055 195);
-  --chart-5: oklch(0.72 0.12 75);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -101,7 +98,7 @@
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
+  --card: oklch(0.14 0.04 259.21);
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
@@ -118,11 +115,11 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.7 0.11 172);
-  --chart-2: oklch(0.62 0.1 168);
-  --chart-3: oklch(0.78 0.07 158);
-  --chart-4: oklch(0.5 0.07 195);
-  --chart-5: oklch(0.76 0.13 75);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -136,10 +133,34 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Evita zoom de foco em inputs no mobile */
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 }
