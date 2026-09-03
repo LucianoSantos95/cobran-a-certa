@@ -20,17 +20,27 @@ const FLUTUANTES = [
 function FloatingPagamentos() {
   const reduce = useReducedMotion();
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
       {FLUTUANTES.map(({ Icon, top, left, size, dur, delay }, i) => (
         <motion.div
           key={i}
-          className="absolute text-primary-foreground/10"
+          className="pointer-events-auto absolute text-primary-foreground"
           style={{ top, left }}
-          initial={false}
-          animate={reduce ? { y: 0, rotate: 0 } : { y: [0, -18, 0], rotate: [-4, 4, -4] }}
+          initial={{ opacity: 0.1 }}
+          animate={
+            reduce
+              ? { y: 0, rotate: 0, opacity: 0.1 }
+              : { y: [0, -18, 0], rotate: [-4, 4, -4], opacity: 0.1 }
+          }
           transition={
             reduce ? { duration: 0 } : { duration: dur, delay, repeat: Infinity, ease: "easeInOut" }
           }
+          whileHover={{
+            scale: 1.45,
+            rotate: 14,
+            opacity: 0.5,
+            transition: { type: "spring", stiffness: 320, damping: 14 },
+          }}
         >
           <Icon style={{ width: size, height: size }} strokeWidth={1.25} />
         </motion.div>
@@ -159,9 +169,7 @@ function AuthPage() {
           </div>
 
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Entrar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Acesso restrito durante a fase de validação.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Acesso restrito · versão beta.</p>
 
           <form onSubmit={entrar} className="mt-6 space-y-4">
             <div className="space-y-2">
@@ -247,9 +255,12 @@ function AuthPage() {
             <li>• Feito para serviço pontual, não para assinatura recorrente.</li>
           </ul>
         </div>
-        <p className="relative text-xs text-primary-foreground/60">
-          Fase de validação · uso interno
-        </p>
+        <div className="relative">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground uppercase">
+            <span className="size-1.5 rounded-full bg-primary-foreground" />
+            Versão beta
+          </span>
+        </div>
       </aside>
     </main>
   );
