@@ -1,9 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { BlurFade } from "@/components/magicui/blur-fade";
+import { MetricCard } from "@/components/metric-card";
 import {
   carregarPainel,
   criarCliente,
@@ -72,16 +74,6 @@ const dataBR = (iso: string) => {
 };
 
 const dataHoraBR = dataHoraSP;
-
-function Card({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe?: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-5">
-      <p className="text-sm text-muted-foreground">{titulo}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{valor}</p>
-      {detalhe ? <p className="mt-1 text-xs text-muted-foreground">{detalhe}</p> : null}
-    </div>
-  );
-}
 
 function Painel() {
   const navigate = useNavigate();
@@ -189,6 +181,9 @@ function Painel() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" asChild>
+            <Link to="/admin">Operação</Link>
+          </Button>
           <Dialog open={clienteAberto} onOpenChange={setClienteAberto}>
             <DialogTrigger asChild>
               <Button variant="outline">Novo cliente</Button>
@@ -293,39 +288,51 @@ function Painel() {
       </header>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          titulo="Total a Receber"
-          valor={isLoading ? "—" : moeda(data?.metricas.totalAReceber ?? 0)}
-        />
-        <Card
-          titulo="Total em Atraso"
-          valor={isLoading ? "—" : moeda(data?.metricas.totalEmAtraso ?? 0)}
-        />
-        <Card
-          titulo="Taxa de Recuperação"
-          valor={
-            isLoading || data?.metricas.taxaRecuperacao == null
-              ? "—"
-              : `${data.metricas.taxaRecuperacao.toFixed(0)}%`
-          }
-          detalhe="Atrasadas pagas após um lembrete"
-        />
-        <Card
-          titulo="Recebido no Mês"
-          valor={isLoading ? "—" : moeda(data?.metricas.recebidoNoMes ?? 0)}
-        />
+        {[
+          {
+            titulo: "Total a Receber",
+            valor: isLoading ? null : (data?.metricas.totalAReceber ?? 0),
+            format: moeda,
+          },
+          {
+            titulo: "Total em Atraso",
+            valor: isLoading ? null : (data?.metricas.totalEmAtraso ?? 0),
+            format: moeda,
+          },
+          {
+            titulo: "Taxa de Recuperação",
+            valor:
+              isLoading || data?.metricas.taxaRecuperacao == null
+                ? null
+                : data.metricas.taxaRecuperacao,
+            format: (n: number) => `${n.toFixed(0)}%`,
+            detalhe: "Atrasadas pagas após um lembrete",
+            destaque: true,
+          },
+          {
+            titulo: "Recebido no Mês",
+            valor: isLoading ? null : (data?.metricas.recebidoNoMes ?? 0),
+            format: moeda,
+          },
+        ].map((m, i) => (
+          <BlurFade key={m.titulo} delay={i * 0.06}>
+            <MetricCard {...m} />
+          </BlurFade>
+        ))}
       </section>
 
-      <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed bg-muted/40 p-4">
-        <p className="text-sm text-muted-foreground">
-          Disparo manual durante a validação: o envio automático diário entra depois desta fase.
-        </p>
-        <Button variant="secondary" onClick={() => mRodar.mutate()} disabled={mRodar.isPending}>
-          {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
-        </Button>
-      </section>
+      <BlurFade delay={0.28}>
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed bg-muted/40 p-4">
+          <p className="text-sm text-muted-foreground">
+            Disparo manual durante a validação: o envio automático diário entra depois desta fase.
+          </p>
+          <Button variant="secondary" onClick={() => mRodar.mutate()} disabled={mRodar.isPending}>
+            {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
+          </Button>
+        </section>
+      </BlurFade>
 
-      <section className="mt-10">
+      <BlurFade inView className="mt-10 block">
         <h2 className="text-lg font-medium text-foreground">Cobranças</h2>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card">
           <Table>
@@ -381,9 +388,9 @@ function Painel() {
             </TableBody>
           </Table>
         </div>
-      </section>
+      </BlurFade>
 
-      <section className="mt-10">
+      <BlurFade inView className="mt-10 block">
         <h2 className="text-lg font-medium text-foreground">Log de envios</h2>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card">
           <Table>
@@ -418,10 +425,10 @@ function Painel() {
             </TableBody>
           </Table>
         </div>
-      </section>
+      </BlurFade>
 
       {(data?.clientes.length ?? 0) > 0 ? (
-        <section className="mt-10 mb-4">
+        <BlurFade inView className="mt-10 mb-4 block">
           <h2 className="text-lg font-medium text-foreground">Clientes</h2>
           <ul className="mt-3 divide-y rounded-xl border bg-card">
             {(data?.clientes ?? []).map((c) => (
@@ -431,7 +438,7 @@ function Painel() {
               </li>
             ))}
           </ul>
-        </section>
+        </BlurFade>
       ) : null}
     </main>
   );
