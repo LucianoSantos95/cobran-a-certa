@@ -24,7 +24,7 @@ function RouteComponent() {
     <div className="min-h-svh bg-background">
       <AppNav userId={user.id} email={user.email ?? ""} />
       <Outlet />
-      <FeedbackButton />
+      <FeedbackButton userId={user.id} email={user.email ?? ""} />
     </div>
   );
 }

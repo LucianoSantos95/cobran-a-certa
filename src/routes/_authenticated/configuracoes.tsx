@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações | Cobrança Certa" }] }),
+  head: () => ({ meta: [{ title: "Minha conta | Cobrança Certa" }] }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if ((data.user?.email ?? "").toLowerCase() !== EMAIL_AUTORIZADO) {
@@ -258,9 +258,9 @@ function Configuracoes() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Configurações</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Minha conta</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sua conta e os ajustes que se aplicam a todas as cobranças.
+          Seu perfil e os ajustes que se aplicam a todas as cobranças.
         </p>
       </header>
 

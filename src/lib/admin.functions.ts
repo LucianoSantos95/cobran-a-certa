@@ -30,7 +30,9 @@ export interface UsuarioDTO {
 
 export interface FeedbackDTO {
   id: string;
+  nome: string;
   email: string;
+  estrelas: number | null;
   mensagem: string;
   criadoEm: string;
 }
@@ -83,7 +85,7 @@ export const carregarAdmin = createServerFn({ method: "GET" })
       supabase.from("profiles").select("id, nome, email, criado_em"),
       supabase
         .from("feedback")
-        .select("id, email, mensagem, criado_em")
+        .select("id, nome, email, estrelas, mensagem, criado_em")
         .order("criado_em", { ascending: false }),
     ]);
 
@@ -238,8 +240,10 @@ export const carregarAdmin = createServerFn({ method: "GET" })
       retencao: { pct: cohort ? (retidos / cohort) * 100 : null, cohort },
       feedback: feedbackRows.map((f) => ({
         id: f.id,
+        nome: f.nome || "—",
         email: f.email || "—",
-        mensagem: f.mensagem,
+        estrelas: f.estrelas,
+        mensagem: f.mensagem ?? "",
         criadoEm: f.criado_em,
       })),
     };

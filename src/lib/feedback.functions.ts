@@ -3,7 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const feedbackSchema = z.object({
-  mensagem: z.string().trim().min(3, "Escreva um pouco mais").max(2000),
+  nome: z.string().trim().min(1, "Informe seu nome").max(120),
+  email: z.string().trim().email("E-mail inválido").max(255),
+  estrelas: z.number().int().min(1, "Dê uma nota").max(5),
+  mensagem: z.string().trim().max(2000).optional().default(""),
 });
 
 /**
@@ -14,10 +17,11 @@ export const enviarFeedback = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => feedbackSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const email = String((context.claims as { email?: unknown })?.email ?? "");
     const { error } = await context.supabase.from("feedback").insert({
       user_id: context.userId,
-      email,
+      nome: data.nome,
+      email: data.email.toLowerCase(),
+      estrelas: data.estrelas,
       mensagem: data.mensagem,
     });
     if (error) {

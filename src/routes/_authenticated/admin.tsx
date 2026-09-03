@@ -6,8 +6,10 @@ import { EMAIL_AUTORIZADO } from "@/lib/acesso";
 import { carregarAdmin } from "@/lib/admin.functions";
 import { formatarBRL } from "@/lib/moeda";
 import { dataHoraSP } from "@/lib/datas";
+import { Star } from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,7 +22,7 @@ import {
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
-    meta: [{ title: "Operação | Cobrança Certa" }],
+    meta: [{ title: "Admin | Cobrança Certa" }],
   }),
   beforeLoad: async () => {
     // A operação é só da conta admin — trava própria além do guard de
@@ -136,9 +138,10 @@ function Admin() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Operação</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Admin</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Visão agregada da base — só você vê esta tela.
+          Métricas internas de validação, agregadas em toda a base. Só você vê — o usuário acompanha
+          as cobranças dele no Painel.
         </p>
       </header>
 
@@ -242,11 +245,33 @@ function Admin() {
         <div className="mt-3 space-y-3">
           {feedback.map((f) => (
             <div key={f.id} className="rounded-xl border bg-card p-4 shadow-sm">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{f.email}</span>
-                <span>{dataHoraSP(f.criadoEm)}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-foreground">{f.nome}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{f.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {f.estrelas ? (
+                    <span className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star
+                          key={n}
+                          className={cn(
+                            "size-4",
+                            n <= f.estrelas!
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-muted-foreground/30",
+                          )}
+                        />
+                      ))}
+                    </span>
+                  ) : null}
+                  <span className="text-xs text-muted-foreground">{dataHoraSP(f.criadoEm)}</span>
+                </div>
               </div>
-              <p className="mt-2 text-sm whitespace-pre-line text-foreground">{f.mensagem}</p>
+              {f.mensagem ? (
+                <p className="mt-2 text-sm whitespace-pre-line text-foreground">{f.mensagem}</p>
+              ) : null}
             </div>
           ))}
           {!isLoading && feedback.length === 0 ? (

@@ -31,8 +31,7 @@ export function AppNav({ userId, email }: { userId: string; email: string }) {
 
   const links = [
     { to: "/", label: "Painel" },
-    ...(isAdmin ? [{ to: "/admin", label: "Operação" }] : []),
-    { to: "/configuracoes", label: "Configurações" },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ] as const;
 
   async function sair() {
