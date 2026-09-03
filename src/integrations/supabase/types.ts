@@ -14,13 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clientes: {
+        Row: {
+          criado_em: string
+          email: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          email: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          email?: string
+          id?: string
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cobrancas: {
+        Row: {
+          cliente_id: string
+          criado_em: string
+          id: string
+          pago_em: string | null
+          status: string
+          user_id: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          cliente_id: string
+          criado_em?: string
+          id?: string
+          pago_em?: string | null
+          status?: string
+          user_id: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          cliente_id?: string
+          criado_em?: string
+          id?: string
+          pago_em?: string | null
+          status?: string
+          user_id?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      envios: {
+        Row: {
+          cobranca_id: string
+          data_envio: string
+          erro: string | null
+          id: string
+          status_envio: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cobranca_id: string
+          data_envio?: string
+          erro?: string | null
+          id?: string
+          status_envio: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          cobranca_id?: string
+          data_envio?: string
+          erro?: string | null
+          id?: string
+          status_envio?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "envios_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_allowed_user: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
