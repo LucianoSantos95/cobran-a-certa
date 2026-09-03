@@ -3,14 +3,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { Lock, Trash2 } from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   carregarPainel,
   criarCliente,
   criarCobranca,
+  excluirCliente,
   marcarComoPaga,
   reabrirCobranca,
   rodarCobrancas,
@@ -83,6 +95,7 @@ function Painel() {
   const fnCobranca = useServerFn(criarCobranca);
   const fnPaga = useServerFn(marcarComoPaga);
   const fnReabrir = useServerFn(reabrirCobranca);
+  const fnExcluir = useServerFn(excluirCliente);
   const fnRodar = useServerFn(rodarCobrancas);
 
   const { data, isLoading } = useQuery({
@@ -143,6 +156,19 @@ function Painel() {
   const mReabrir = useMutation({
     mutationFn: (id: string) => fnReabrir({ data: { id } }),
     onSuccess: invalidar,
+  });
+
+  const mExcluir = useMutation({
+    mutationFn: (id: string) => fnExcluir({ data: { id } }),
+    onSuccess: (r) => {
+      toast.success("Cliente excluído", {
+        description: r.cobrancasRemovidas
+          ? `${r.cobrancasRemovidas} cobrança(s) removida(s) junto.`
+          : undefined,
+      });
+      invalidar();
+    },
+    onError: (e: Error) => toast.error("Não foi possível excluir", { description: e.message }),
   });
 
   const mRodar = useMutation({
@@ -435,9 +461,41 @@ function Painel() {
           <h2 className="text-lg font-medium text-foreground">Clientes</h2>
           <ul className="mt-3 divide-y rounded-xl border bg-card">
             {(data?.clientes ?? []).map((c) => (
-              <li key={c.id} className="flex justify-between px-4 py-3 text-sm">
-                <span className="font-medium text-foreground">{c.nome}</span>
-                <span className="text-muted-foreground">{c.email}</span>
+              <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span className="min-w-0">
+                  <span className="font-medium text-foreground">{c.nome}</span>
+                  <span className="ml-2 text-muted-foreground">{c.email}</span>
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label={`Excluir ${c.nome}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir {c.nome}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Isso remove o cliente e também todas as cobranças e envios ligados a ele.
+                        Não dá para desfazer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => mExcluir.mutate(c.id)}
+                        className="bg-destructive text-white hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </li>
             ))}
           </ul>

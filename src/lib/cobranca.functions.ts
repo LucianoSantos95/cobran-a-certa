@@ -170,6 +170,26 @@ export const criarCliente = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const excluirCliente = createServerFn({ method: "POST" })
+  .middleware([requireUsuarioAutorizado])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    // Conta o que será removido junto (FK em cascata: cobranças e envios).
+    const { count } = await context.supabase
+      .from("cobrancas")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", data.id)
+      .eq("user_id", context.userId);
+
+    const { error } = await context.supabase
+      .from("clientes")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) falha("Não foi possível excluir o cliente.", error);
+    return { ok: true, cobrancasRemovidas: count ?? 0 };
+  });
+
 const cobrancaSchema = z.object({
   cliente_id: z.string().uuid("Selecione um cliente"),
   valor: z.number().positive("Valor deve ser maior que zero").max(99999999),

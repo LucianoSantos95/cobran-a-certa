@@ -1,11 +1,43 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Banknote, CreditCard, QrCode, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { EMAIL_AUTORIZADO } from "@/lib/acesso";
+
+const FLUTUANTES = [
+  { Icon: QrCode, top: "12%", left: "14%", size: 72, dur: 9, delay: 0 },
+  { Icon: CreditCard, top: "58%", left: "8%", size: 88, dur: 11, delay: 1.2 },
+  { Icon: Banknote, top: "30%", left: "68%", size: 96, dur: 10, delay: 0.6 },
+  { Icon: Wallet, top: "74%", left: "62%", size: 64, dur: 12, delay: 1.8 },
+  { Icon: QrCode, top: "84%", left: "30%", size: 52, dur: 13, delay: 0.3 },
+];
+
+function FloatingPagamentos() {
+  const reduce = useReducedMotion();
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {FLUTUANTES.map(({ Icon, top, left, size, dur, delay }, i) => (
+        <motion.div
+          key={i}
+          className="absolute text-primary-foreground/10"
+          style={{ top, left }}
+          initial={false}
+          animate={reduce ? { y: 0, rotate: 0 } : { y: [0, -18, 0], rotate: [-4, 4, -4] }}
+          transition={
+            reduce ? { duration: 0 } : { duration: dur, delay, repeat: Infinity, ease: "easeInOut" }
+          }
+        >
+          <Icon style={{ width: size, height: size }} strokeWidth={1.25} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -198,6 +230,7 @@ function AuthPage() {
             backgroundPosition: "0 0, 14px 14px",
           }}
         />
+        <FloatingPagamentos />
         <div className="relative flex items-center gap-2">
           <span className="grid size-7 place-items-center rounded-md bg-primary-foreground text-xs font-bold text-primary">
             CC

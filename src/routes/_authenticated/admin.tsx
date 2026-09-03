@@ -4,18 +4,27 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { EMAIL_AUTORIZADO } from "@/lib/acesso";
 import { carregarAdmin } from "@/lib/admin.functions";
+import { formatarBRL } from "@/lib/moeda";
+import { dataHoraSP } from "@/lib/datas";
 import { BlurFade } from "@/components/magicui/blur-fade";
-import { NumberTicker } from "@/components/magicui/number-ticker";
 import { MetricCard } from "@/components/metric-card";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [{ title: "Operação | Cobrança Certa" }],
   }),
   beforeLoad: async () => {
-    // Redundante com o guard de /_authenticated, mas deixa a intenção explícita:
-    // a operação é só da conta dona.
+    // A operação é só da conta admin — trava própria além do guard de
+    // /_authenticated e da RLS.
     const { data } = await supabase.auth.getUser();
     if ((data.user?.email ?? "").toLowerCase() !== EMAIL_AUTORIZADO) {
       throw redirect({ to: "/" });
@@ -29,65 +38,6 @@ function tempoLegivel(horas: number | null): string {
   if (horas < 1) return `${Math.round(horas * 60)} min`;
   if (horas < 48) return `${horas.toFixed(1)} h`;
   return `${(horas / 24).toFixed(1)} dias`;
-}
-
-function Funil({
-  etapas,
-}: {
-  etapas: {
-    etapa: string;
-    valor: number | null;
-    disponivel: boolean;
-    quedaPct: number | null;
-  }[];
-}) {
-  const max = Math.max(1, ...etapas.map((e) => e.valor ?? 0));
-  return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm">
-      <h2 className="text-sm font-medium text-muted-foreground">Funil de aquisição</h2>
-      <div className="mt-4 space-y-3">
-        {etapas.map((e, i) => {
-          const largura = e.valor == null ? 0 : Math.max(4, (e.valor / max) * 100);
-          return (
-            <div key={e.etapa}>
-              {i > 0 && e.quedaPct != null ? (
-                <p className="mb-1 pl-1 text-xs text-muted-foreground">
-                  ▼ {e.quedaPct.toFixed(0)}% de queda
-                </p>
-              ) : null}
-              <div className="flex items-center gap-3">
-                <div className="h-9 flex-1 overflow-hidden rounded-md bg-muted">
-                  <div
-                    className={cn(
-                      "flex h-full items-center rounded-md px-3 text-sm font-medium transition-[width] duration-700 ease-out",
-                      e.disponivel
-                        ? "bg-primary/15 text-foreground"
-                        : "bg-transparent text-muted-foreground",
-                    )}
-                    style={{ width: `${largura}%` }}
-                  >
-                    <span className="truncate">{e.etapa}</span>
-                  </div>
-                </div>
-                <div className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums">
-                  {e.valor == null ? (
-                    <span className="text-muted-foreground">—</span>
-                  ) : (
-                    <NumberTicker value={e.valor} />
-                  )}
-                </div>
-              </div>
-              {!e.disponivel ? (
-                <p className="mt-1 pl-1 text-xs text-muted-foreground/70">
-                  fonte externa (Notion / Hub Central)
-                </p>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 function BarraDupla({
@@ -124,6 +74,65 @@ function Admin() {
   const buscar = useServerFn(carregarAdmin);
   const { data, isLoading } = useQuery({ queryKey: ["admin"], queryFn: () => buscar() });
 
+  const cards = [
+    {
+      titulo: "Taxa de recuperação agregada",
+      valor: isLoading ? null : (data?.recuperacao.pct ?? null),
+      format: (n: number) => `${n.toFixed(0)}%`,
+      detalhe: data
+        ? `${data.recuperacao.recuperadas} de ${data.recuperacao.base} atrasadas com lembrete`
+        : undefined,
+      destaque: true,
+    },
+    {
+      titulo: "Ativação (contas com cobrança)",
+      valor: isLoading ? null : (data?.ativacao.pctComCobranca ?? null),
+      format: (n: number) => `${n.toFixed(0)}%`,
+      detalhe: data
+        ? `1ª cobrança em ${tempoLegivel(data.ativacao.horasAtePrimeiraCobranca)}`
+        : undefined,
+    },
+    {
+      titulo: "Valor total na base",
+      valor: isLoading ? null : (data?.uso.valorTotalBase ?? 0),
+      format: formatarBRL,
+      detalhe: data
+        ? `ticket médio ${data.uso.ticketMedio == null ? "—" : formatarBRL(data.uso.ticketMedio)}`
+        : undefined,
+    },
+    {
+      titulo: "Cobranças na plataforma",
+      valor: isLoading ? null : (data?.uso.totalCobrancas ?? 0),
+      detalhe: data ? `${data.uso.totalClientes} clientes cadastrados` : undefined,
+    },
+    {
+      titulo: "Usuários ativos na semana",
+      valor: isLoading ? null : (data?.uso.usuariosAtivosSemana ?? 0),
+      detalhe: data
+        ? `${(data.uso.mediaCobrancasPorAtivo ?? 0).toFixed(1)} cobranças/ativo`
+        : undefined,
+    },
+    {
+      titulo: "Taxa de falha de envio",
+      valor: isLoading ? null : (data?.envio.taxaFalha ?? null),
+      format: (n: number) => `${n.toFixed(1)}%`,
+      detalhe: data ? `${data.envio.total} envios no total` : undefined,
+    },
+    {
+      titulo: "Retenção (semana 1 → 3)",
+      valor: isLoading ? null : (data?.retencao.pct ?? null),
+      format: (n: number) => `${n.toFixed(0)}%`,
+      detalhe: data
+        ? data.retencao.cohort
+          ? `cohort de ${data.retencao.cohort}`
+          : "dados insuficientes"
+        : undefined,
+    },
+  ];
+
+  const usuarios = data?.usuarios ?? [];
+  const feedback = data?.feedback ?? [];
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <header>
@@ -133,58 +142,8 @@ function Admin() {
         </p>
       </header>
 
-      <BlurFade className="mt-8 block">
-        <Funil etapas={data?.funil ?? []} />
-      </BlurFade>
-
-      <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          {
-            titulo: "Taxa de recuperação agregada",
-            valor: isLoading ? null : (data?.recuperacao.pct ?? null),
-            format: (n: number) => `${n.toFixed(0)}%`,
-            detalhe: data
-              ? `${data.recuperacao.recuperadas} de ${data.recuperacao.base} atrasadas com lembrete`
-              : undefined,
-            destaque: true,
-          },
-          {
-            titulo: "Ativação (contas com cobrança)",
-            valor: isLoading ? null : (data?.ativacao.pctComCobranca ?? null),
-            format: (n: number) => `${n.toFixed(0)}%`,
-            detalhe: data
-              ? `1ª cobrança em ${tempoLegivel(data.ativacao.horasAtePrimeiraCobranca)}`
-              : undefined,
-          },
-          {
-            titulo: "Cobranças na plataforma",
-            valor: isLoading ? null : (data?.uso.totalCobrancas ?? 0),
-            detalhe: data ? `${data.uso.totalClientes} clientes cadastrados` : undefined,
-          },
-          {
-            titulo: "Usuários ativos na semana",
-            valor: isLoading ? null : (data?.uso.usuariosAtivosSemana ?? 0),
-            detalhe: data
-              ? `${(data.uso.mediaCobrancasPorAtivo ?? 0).toFixed(1)} cobranças/ativo`
-              : undefined,
-          },
-          {
-            titulo: "Taxa de falha de envio",
-            valor: isLoading ? null : (data?.envio.taxaFalha ?? null),
-            format: (n: number) => `${n.toFixed(1)}%`,
-            detalhe: data ? `${data.envio.total} envios no total` : undefined,
-          },
-          {
-            titulo: "Retenção (semana 1 → 3)",
-            valor: isLoading ? null : (data?.retencao.pct ?? null),
-            format: (n: number) => `${n.toFixed(0)}%`,
-            detalhe: data
-              ? data.retencao.cohort
-                ? `cohort de ${data.retencao.cohort}`
-                : "dados insuficientes"
-              : undefined,
-          },
-        ].map((m, i) => (
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((m, i) => (
           <BlurFade key={m.titulo} delay={i * 0.05}>
             <MetricCard
               titulo={m.titulo}
@@ -231,10 +190,72 @@ function Admin() {
         </div>
       </BlurFade>
 
-      <p className="mt-6 text-xs text-muted-foreground/70">
-        Enquanto o app é de uso interno, "todos os usuários" = sua conta. As duas primeiras etapas
-        do funil dependem de dados do Notion / Hub Central e entram quando essa integração existir.
-      </p>
+      <BlurFade inView className="mt-4 block">
+        <h2 className="text-lg font-medium text-foreground">Usuários da plataforma</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Quem se cadastrou, o que já usou e se esteve ativo nos últimos 7 dias.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-xl border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Cadastro</TableHead>
+                <TableHead className="text-right">Clientes</TableHead>
+                <TableHead className="text-right">Cobranças</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {usuarios.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell>
+                    <div className="font-medium text-foreground">{u.nome}</div>
+                    <div className="text-xs text-muted-foreground">{u.email}</div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.criadoEm ? dataHoraSP(u.criadoEm) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{u.clientes}</TableCell>
+                  <TableCell className="text-right tabular-nums">{u.cobrancas}</TableCell>
+                  <TableCell>
+                    <Badge variant={u.ativo7d ? "secondary" : "outline"}>
+                      {u.ativo7d ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && usuarios.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    Nenhum usuário cadastrado ainda.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </BlurFade>
+
+      <BlurFade inView className="mt-4 mb-4 block">
+        <h2 className="text-lg font-medium text-foreground">Feedback dos usuários</h2>
+        <div className="mt-3 space-y-3">
+          {feedback.map((f) => (
+            <div key={f.id} className="rounded-xl border bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{f.email}</span>
+                <span>{dataHoraSP(f.criadoEm)}</span>
+              </div>
+              <p className="mt-2 text-sm whitespace-pre-line text-foreground">{f.mensagem}</p>
+            </div>
+          ))}
+          {!isLoading && feedback.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+              Nenhum feedback recebido ainda.
+            </div>
+          ) : null}
+        </div>
+      </BlurFade>
     </main>
   );
 }
