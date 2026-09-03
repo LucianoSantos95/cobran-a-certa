@@ -3,9 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, Trash2 } from "lucide-react";
+import { Lock, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
+import { CobrancaDialog } from "@/components/cobranca-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -21,14 +22,15 @@ import {
 import {
   carregarPainel,
   criarCliente,
-  criarCobranca,
   excluirCliente,
+  excluirCobranca,
   marcarComoPaga,
   reabrirCobranca,
   rodarCobrancas,
 } from "@/lib/cobranca.functions";
-import { formatarBRL, parseBRL } from "@/lib/moeda";
+import { formatarBRL } from "@/lib/moeda";
 import { dataHoraSP, hojeSP } from "@/lib/datas";
+import { linkWhats, mensagemWhats, telefoneWhats } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,13 +43,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -92,10 +87,10 @@ function Painel() {
   const queryClient = useQueryClient();
   const buscar = useServerFn(carregarPainel);
   const fnCliente = useServerFn(criarCliente);
-  const fnCobranca = useServerFn(criarCobranca);
   const fnPaga = useServerFn(marcarComoPaga);
   const fnReabrir = useServerFn(reabrirCobranca);
   const fnExcluir = useServerFn(excluirCliente);
+  const fnExcluirCobranca = useServerFn(excluirCobranca);
   const fnRodar = useServerFn(rodarCobrancas);
 
   const { data, isLoading } = useQuery({
@@ -108,17 +103,15 @@ function Painel() {
   const [clienteAberto, setClienteAberto] = useState(false);
   const [nome, setNome] = useState("");
   const [emailCliente, setEmailCliente] = useState("");
-
-  const [cobrancaAberta, setCobrancaAberta] = useState(false);
-  const [clienteId, setClienteId] = useState("");
-  const [valor, setValor] = useState("");
-  const [vencimento, setVencimento] = useState("");
+  const [whatsCliente, setWhatsCliente] = useState("");
 
   const mCliente = useMutation({
-    mutationFn: () => fnCliente({ data: { nome, email: emailCliente } }),
+    mutationFn: () =>
+      fnCliente({ data: { nome, email: emailCliente, whatsapp: whatsCliente.trim() } }),
     onSuccess: () => {
       setNome("");
       setEmailCliente("");
+      setWhatsCliente("");
       setClienteAberto(false);
       toast.success("Cliente cadastrado");
       invalidar();
@@ -126,23 +119,13 @@ function Painel() {
     onError: (e: Error) => toast.error("Erro ao cadastrar", { description: e.message }),
   });
 
-  const mCobranca = useMutation({
-    mutationFn: () => {
-      const valorNum = parseBRL(valor);
-      if (!Number.isFinite(valorNum) || valorNum <= 0) {
-        return Promise.reject(new Error("Informe um valor válido, ex: 1.500,00"));
-      }
-      return fnCobranca({ data: { cliente_id: clienteId, valor: valorNum, vencimento } });
-    },
+  const mExcluirCobranca = useMutation({
+    mutationFn: (id: string) => fnExcluirCobranca({ data: { id } }),
     onSuccess: () => {
-      setClienteId("");
-      setValor("");
-      setVencimento("");
-      setCobrancaAberta(false);
-      toast.success("Cobrança cadastrada");
+      toast.success("Cobrança excluída");
       invalidar();
     },
-    onError: (e: Error) => toast.error("Erro ao cadastrar", { description: e.message }),
+    onError: (e: Error) => toast.error("Não foi possível excluir", { description: e.message }),
   });
 
   const mPaga = useMutation({
@@ -209,7 +192,9 @@ function Painel() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Novo cliente</DialogTitle>
-                <DialogDescription>Nome e e-mail para envio das cobranças.</DialogDescription>
+                <DialogDescription>
+                  Nome e e-mail para as cobranças. WhatsApp é opcional (usado no envio assistido).
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -231,6 +216,17 @@ function Painel() {
                     maxLength={255}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whats-cliente">WhatsApp (opcional)</Label>
+                  <Input
+                    id="whats-cliente"
+                    inputMode="tel"
+                    value={whatsCliente}
+                    onChange={(e) => setWhatsCliente(e.target.value)}
+                    maxLength={20}
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button
@@ -243,61 +239,10 @@ function Painel() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={cobrancaAberta} onOpenChange={setCobrancaAberta}>
-            <DialogTrigger asChild>
-              <Button>Nova cobrança</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova cobrança</DialogTitle>
-                <DialogDescription>Cliente, valor e data de vencimento.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Cliente</Label>
-                  <Select value={clienteId} onValueChange={setClienteId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(data?.clientes ?? []).map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="valor">Valor (R$)</Label>
-                  <Input
-                    id="valor"
-                    inputMode="decimal"
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    placeholder="1500,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vencimento">Vencimento</Label>
-                  <Input
-                    id="vencimento"
-                    type="date"
-                    value={vencimento}
-                    onChange={(e) => setVencimento(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={() => mCobranca.mutate()}
-                  disabled={!clienteId || !valor || !vencimento || mCobranca.isPending}
-                >
-                  Salvar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <CobrancaDialog
+            clientes={data?.clientes ?? []}
+            trigger={<Button>Nova cobrança</Button>}
+          />
         </div>
       </header>
 
@@ -361,9 +306,36 @@ function Painel() {
         </section>
       </BlurFade>
 
+      {(data?.proximosEnvios?.length ?? 0) > 0 ? (
+        <BlurFade inView className="mt-10 block">
+          <h2 className="text-lg font-medium text-foreground">Próximos envios</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            O que a próxima rodada vai disparar — confira antes de rodar.
+          </p>
+          <ul className="mt-3 divide-y rounded-xl border bg-card">
+            {(data?.proximosEnvios ?? []).map((p, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span className="min-w-0">
+                  <span className="font-medium text-foreground">{p.cliente_nome}</span>
+                  {p.descricao ? (
+                    <span className="ml-2 text-muted-foreground">{p.descricao}</span>
+                  ) : null}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <Badge variant={p.tipo === "lembrete" ? "outline" : "destructive"}>
+                    {p.tipo === "lembrete" ? "Lembrete" : "Cobrança firme"}
+                  </Badge>
+                  <span className="text-muted-foreground">{p.quando}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </BlurFade>
+      ) : null}
+
       <BlurFade inView className="mt-10 block">
         <h2 className="text-lg font-medium text-foreground">Cobranças</h2>
-        <div className="mt-3 overflow-hidden rounded-xl border bg-card">
+        <div className="mt-3 overflow-x-auto rounded-xl border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -372,15 +344,23 @@ function Painel() {
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Última ação</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(data?.cobrancas ?? []).map((c) => {
                 const atrasada = c.status !== "pago" && c.vencimento < hoje;
+                const tel = telefoneWhats(c.cliente_whatsapp);
                 return (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.cliente_nome}</TableCell>
+                    <TableCell className="font-medium">
+                      {c.cliente_nome}
+                      {c.descricao ? (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {c.descricao}
+                        </div>
+                      ) : null}
+                    </TableCell>
                     <TableCell>{moeda(c.valor)}</TableCell>
                     <TableCell>{dataBR(c.vencimento)}</TableCell>
                     <TableCell>
@@ -391,18 +371,95 @@ function Painel() {
                       >
                         {c.status === "pago" ? "Pago" : atrasada ? "Em atraso" : "Pendente"}
                       </Badge>
+                      {atrasada && c.dias_atraso > 0 ? (
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          {c.dias_atraso} dia{c.dias_atraso > 1 ? "s" : ""}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{c.ultima_acao ?? "—"}</TableCell>
-                    <TableCell className="text-right">
-                      {c.status === "pago" ? (
-                        <Button size="sm" variant="ghost" onClick={() => mReabrir.mutate(c.id)}>
-                          Reabrir
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => mPaga.mutate(c.id)}>
-                          Marcar paga
-                        </Button>
-                      )}
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        {c.status !== "pago" && tel ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 text-muted-foreground hover:text-foreground"
+                            aria-label="Enviar no WhatsApp"
+                            onClick={() =>
+                              window.open(
+                                linkWhats(
+                                  tel,
+                                  mensagemWhats({
+                                    nomeCliente: c.cliente_nome,
+                                    valor: c.valor,
+                                    vencimento: c.vencimento,
+                                    descricao: c.descricao,
+                                    instrucoesPagamento: data?.instrucoesPagamento ?? "",
+                                  }),
+                                ),
+                                "_blank",
+                                "noopener",
+                              )
+                            }
+                          >
+                            <MessageCircle className="size-4" />
+                          </Button>
+                        ) : null}
+                        <CobrancaDialog
+                          clientes={data?.clientes ?? []}
+                          cobranca={c}
+                          trigger={
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              aria-label="Editar cobrança"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          }
+                        />
+                        {c.status === "pago" ? (
+                          <Button size="sm" variant="ghost" onClick={() => mReabrir.mutate(c.id)}>
+                            Reabrir
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => mPaga.mutate(c.id)}>
+                            Marcar paga
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-muted-foreground hover:text-destructive"
+                              aria-label="Excluir cobrança"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir esta cobrança?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Remove a cobrança de {c.cliente_nome} ({moeda(c.valor)}) e os envios
+                                ligados a ela. Não dá para desfazer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => mExcluirCobranca.mutate(c.id)}
+                                className="bg-destructive text-white hover:bg-destructive/90"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -465,6 +522,9 @@ function Painel() {
                 <span className="min-w-0">
                   <span className="font-medium text-foreground">{c.nome}</span>
                   <span className="ml-2 text-muted-foreground">{c.email}</span>
+                  {c.whatsapp ? (
+                    <span className="ml-2 text-muted-foreground">· WhatsApp {c.whatsapp}</span>
+                  ) : null}
                 </span>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

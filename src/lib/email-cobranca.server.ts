@@ -14,6 +14,8 @@ export interface DadosEmailCobranca {
   nomeCliente: string;
   valor: number;
   vencimento: string;
+  /** Referência da cobrança (ex.: "Projeto site", "NF 042"). */
+  descricao?: string;
   tipo: TipoEnvio;
   cobrancaId: string;
   /** Instruções de pagamento do prestador; entram no rodapé quando presentes. */
@@ -46,12 +48,14 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
   const templateName = dados.tipo === "lembrete" ? "lembrete-cobranca" : "cobranca-atrasada";
 
   const instrucoes = dados.instrucoesPagamento?.trim();
+  const descricao = dados.descricao?.trim();
 
   const result = await sendTemplateEmail(templateName, dados.para, {
     templateData: {
       nomeCliente: dados.nomeCliente,
       valorFormatado: formatarValor(dados.valor),
       vencimentoFormatado: formatarData(dados.vencimento),
+      ...(descricao ? { descricao } : {}),
       ...(instrucoes ? { instrucoesPagamento: instrucoes } : {}),
       ...(dados.tipo === "cobranca_atrasada" ? { diasAtraso: diasDeAtraso(dados.vencimento) } : {}),
     },

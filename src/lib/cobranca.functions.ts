@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireUsuarioAutorizado } from "./require-allowed-user";
-import { dataCurtaSP, hojeSP, somaDias } from "./datas";
+import { dataCurtaSP, diasDeAtraso, hojeSP, somaDias } from "./datas";
 import {
   EMAIL_NAO_CONFIGURADO,
   emailConfigurado,
@@ -29,10 +29,13 @@ export interface CobrancaDTO {
   cliente_id: string;
   cliente_nome: string;
   cliente_email: string;
+  cliente_whatsapp: string;
+  descricao: string;
   valor: number;
   vencimento: string;
   status: "pendente" | "pago";
   pago_em: string | null;
+  dias_atraso: number;
   ultima_acao: string | null;
 }
 
@@ -40,6 +43,14 @@ export interface ClienteDTO {
   id: string;
   nome: string;
   email: string;
+  whatsapp: string;
+}
+
+export interface ProximoEnvioDTO {
+  cliente_nome: string;
+  descricao: string;
+  tipo: TipoEnvio;
+  quando: string;
 }
 
 export interface MetricasDTO {
@@ -58,11 +69,15 @@ export const carregarPainel = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    const [clientesRes, cobrancasRes, enviosRes] = await Promise.all([
-      supabase.from("clientes").select("id, nome, email").eq("user_id", userId).order("nome"),
+    const [clientesRes, cobrancasRes, enviosRes, perfilRes] = await Promise.all([
+      supabase
+        .from("clientes")
+        .select("id, nome, email, whatsapp")
+        .eq("user_id", userId)
+        .order("nome"),
       supabase
         .from("cobrancas")
-        .select("id, cliente_id, valor, vencimento, status, pago_em")
+        .select("id, cliente_id, descricao, valor, vencimento, status, pago_em")
         .eq("user_id", userId)
         .order("vencimento", { ascending: true }),
       supabase
@@ -70,6 +85,11 @@ export const carregarPainel = createServerFn({ method: "GET" })
         .select("id, cobranca_id, tipo, data_envio, status_envio")
         .eq("user_id", userId)
         .order("data_envio", { ascending: false }),
+      supabase
+        .from("perfil_cobranca")
+        .select("instrucoes_pagamento")
+        .eq("user_id", userId)
+        .maybeSingle(),
     ]);
 
     if (clientesRes.error) falha("Não foi possível carregar o painel.", clientesRes.error);
@@ -79,19 +99,26 @@ export const carregarPainel = createServerFn({ method: "GET" })
     const clientes: ClienteDTO[] = clientesRes.data ?? [];
     const mapaCliente = new Map(clientes.map((c) => [c.id, c]));
     const enviosBrutos = enviosRes.data ?? [];
+    const instrucoesPagamento = perfilRes.data?.instrucoes_pagamento ?? "";
+
+    const hojeStr = hojeSP();
 
     const cobrancas: CobrancaDTO[] = (cobrancasRes.data ?? []).map((c) => {
       const cliente = mapaCliente.get(c.cliente_id);
       const ultimo = enviosBrutos.find((e) => e.cobranca_id === c.id);
+      const atrasada = c.status !== "pago" && c.vencimento < hojeStr;
       return {
         id: c.id,
         cliente_id: c.cliente_id,
         cliente_nome: cliente?.nome ?? "—",
         cliente_email: cliente?.email ?? "",
+        cliente_whatsapp: cliente?.whatsapp ?? "",
+        descricao: c.descricao ?? "",
         valor: Number(c.valor),
         vencimento: c.vencimento,
         status: c.status as "pendente" | "pago",
         pago_em: c.pago_em,
+        dias_atraso: atrasada ? diasDeAtraso(c.vencimento) : 0,
         ultima_acao: ultimo
           ? `${rotuloTipo(ultimo.tipo as TipoEnvio)} ${
               ultimo.status_envio === "enviado" ? "enviado" : "falhou"
@@ -110,8 +137,53 @@ export const carregarPainel = createServerFn({ method: "GET" })
       cliente_nome: mapaCobranca.get(e.cobranca_id)?.cliente_nome ?? "—",
     }));
 
-    const hoje = hojeSP();
+    const hoje = hojeStr;
     const inicioMes = `${hoje.slice(0, 7)}-01`;
+    const seteDiasAtras = somaDias(hoje, -7);
+
+    // Próximos envios: o que a próxima rodada faria + o que vence em breve.
+    const enviadoOk = new Set(
+      enviosBrutos
+        .filter((e) => e.status_envio === "enviado")
+        .map((e) => `${e.cobranca_id}:${e.tipo}`),
+    );
+    const dm = (dia: string) => {
+      const [, m, d] = dia.slice(0, 10).split("-");
+      return `${d}/${m}`;
+    };
+    const proximosEnvios: ProximoEnvioDTO[] = [];
+    for (const c of cobrancas) {
+      if (c.status === "pago") continue;
+      const lembrete = enviadoOk.has(`${c.id}:lembrete`);
+      const firme = enviadoOk.has(`${c.id}:cobranca_atrasada`);
+      if (!lembrete && c.vencimento > seteDiasAtras) {
+        proximosEnvios.push({
+          cliente_nome: c.cliente_nome,
+          descricao: c.descricao,
+          tipo: "lembrete",
+          quando:
+            c.vencimento <= hoje ? "assim que você rodar" : `no vencimento, ${dm(c.vencimento)}`,
+        });
+      } else if (!firme && c.vencimento <= hoje) {
+        let quando: string;
+        if (c.vencimento <= seteDiasAtras) {
+          quando = "assim que você rodar";
+        } else {
+          const faltam = 7 - diasDeAtraso(c.vencimento);
+          quando = `em ${faltam} dia${faltam > 1 ? "s" : ""}`;
+        }
+        proximosEnvios.push({
+          cliente_nome: c.cliente_nome,
+          descricao: c.descricao,
+          tipo: "cobranca_atrasada",
+          quando,
+        });
+      }
+    }
+    proximosEnvios.sort((a, b) => {
+      const agora = (q: string) => (q === "assim que você rodar" ? 0 : 1);
+      return agora(a.quando) - agora(b.quando);
+    });
 
     const pendentes = cobrancas.filter((c) => c.status !== "pago");
     const totalAReceber = pendentes.reduce((s, c) => s + c.valor, 0);
@@ -149,12 +221,23 @@ export const carregarPainel = createServerFn({ method: "GET" })
       taxaRecuperacao: base.length ? (recuperadas.length / base.length) * 100 : null,
     };
 
-    return { clientes, cobrancas, envios, metricas, emailPronto: emailConfigurado() };
+    return {
+      clientes,
+      cobrancas,
+      envios,
+      metricas,
+      proximosEnvios,
+      instrucoesPagamento,
+      emailPronto: emailConfigurado(),
+    };
   });
+
+const soDigitos = (s: string) => s.replace(/\D/g, "");
 
 const clienteSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome").max(120),
   email: z.string().trim().email("E-mail inválido").max(255),
+  whatsapp: z.string().trim().max(20).optional().default(""),
 });
 
 export const criarCliente = createServerFn({ method: "POST" })
@@ -165,6 +248,7 @@ export const criarCliente = createServerFn({ method: "POST" })
       user_id: context.userId,
       nome: data.nome,
       email: data.email.toLowerCase(),
+      whatsapp: soDigitos(data.whatsapp),
     });
     if (error) falha("Não foi possível cadastrar o cliente.", error);
     return { ok: true };
@@ -194,6 +278,7 @@ const cobrancaSchema = z.object({
   cliente_id: z.string().uuid("Selecione um cliente"),
   valor: z.number().positive("Valor deve ser maior que zero").max(99999999),
   vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+  descricao: z.string().trim().max(200).optional().default(""),
 });
 
 export const criarCobranca = createServerFn({ method: "POST" })
@@ -215,9 +300,50 @@ export const criarCobranca = createServerFn({ method: "POST" })
       cliente_id: data.cliente_id,
       valor: data.valor,
       vencimento: data.vencimento,
+      descricao: data.descricao,
       status: "pendente",
     });
     if (error) falha("Não foi possível cadastrar a cobrança.", error);
+    return { ok: true };
+  });
+
+export const editarCobranca = createServerFn({ method: "POST" })
+  .middleware([requireUsuarioAutorizado])
+  .inputValidator((data: unknown) => cobrancaSchema.extend({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: cliente, error: erroCliente } = await context.supabase
+      .from("clientes")
+      .select("id")
+      .eq("id", data.cliente_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (erroCliente) falha("Não foi possível salvar a cobrança.", erroCliente);
+    if (!cliente) throw new Error("Cliente não encontrado.");
+
+    const { error } = await context.supabase
+      .from("cobrancas")
+      .update({
+        cliente_id: data.cliente_id,
+        valor: data.valor,
+        vencimento: data.vencimento,
+        descricao: data.descricao,
+      })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) falha("Não foi possível salvar a cobrança.", error);
+    return { ok: true };
+  });
+
+export const excluirCobranca = createServerFn({ method: "POST" })
+  .middleware([requireUsuarioAutorizado])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("cobrancas")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) falha("Não foi possível excluir a cobrança.", error);
     return { ok: true };
   });
 
@@ -264,7 +390,7 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
 
     const { data: cobrancas, error } = await supabase
       .from("cobrancas")
-      .select("id, cliente_id, valor, vencimento, status")
+      .select("id, cliente_id, descricao, valor, vencimento, status")
       .eq("user_id", userId)
       .eq("status", "pendente");
     if (error) falha("Não foi possível rodar as cobranças.", error);
@@ -328,6 +454,7 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
           nomeCliente: cliente.nome,
           valor: Number(cobranca.valor),
           vencimento: cobranca.vencimento,
+          descricao: cobranca.descricao ?? "",
           tipo: item.tipo,
           cobrancaId: cobranca.id,
           instrucoesPagamento,

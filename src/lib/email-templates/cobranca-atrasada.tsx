@@ -16,6 +16,7 @@ interface Props {
   nomeCliente?: string;
   valorFormatado?: string;
   vencimentoFormatado?: string;
+  descricao?: string;
   diasAtraso?: number;
   instrucoesPagamento?: string;
   remetente?: string;
@@ -25,6 +26,7 @@ const Email = ({
   nomeCliente,
   valorFormatado = "—",
   vencimentoFormatado = "—",
+  descricao,
   diasAtraso,
   instrucoesPagamento,
   remetente = "Cobrança Certa",
@@ -40,6 +42,12 @@ const Email = ({
           em aberto{typeof diasAtraso === "number" ? ` há ${diasAtraso} dias` : ""}.
         </Text>
         <Section style={box}>
+          {descricao ? (
+            <>
+              <Text style={label}>Referente a</Text>
+              <Text style={value}>{descricao}</Text>
+            </>
+          ) : null}
           <Text style={label}>Valor</Text>
           <Text style={value}>{valorFormatado}</Text>
           <Text style={label}>Venceu em</Text>
@@ -73,6 +81,7 @@ export const template = {
     nomeCliente: "Maria Silva",
     valorFormatado: "R$ 1.200,00",
     vencimentoFormatado: "08/09/2026",
+    descricao: "Projeto site institucional",
     diasAtraso: 7,
     instrucoesPagamento: "Pix (chave e-mail): voce@exemplo.com",
   },
