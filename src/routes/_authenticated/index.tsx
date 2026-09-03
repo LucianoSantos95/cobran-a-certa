@@ -12,6 +12,8 @@ import {
   reabrirCobranca,
   rodarCobrancas,
 } from "@/lib/cobranca.functions";
+import { formatarBRL, parseBRL } from "@/lib/moeda";
+import { dataHoraSP, hojeSP } from "@/lib/datas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,13 +46,13 @@ import {
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Controle de Cobrança | Lembretes automáticos" },
+      { title: "Cobrança Certa | Lembretes automáticos" },
       {
         name: "description",
         content:
           "Painel de cobranças por projeto: total a receber, atrasos, taxa de recuperação e lembretes automáticos por e-mail.",
       },
-      { property: "og:title", content: "Controle de Cobrança" },
+      { property: "og:title", content: "Cobrança Certa" },
       {
         property: "og:description",
         content: "Acompanhe cobranças, atrasos e lembretes automáticos em um só painel.",
@@ -62,16 +64,14 @@ export const Route = createFileRoute("/_authenticated/")({
   component: Painel,
 });
 
-const moeda = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const moeda = formatarBRL;
 
 const dataBR = (iso: string) => {
   const [a, m, d] = iso.slice(0, 10).split("-");
   return `${d}/${m}/${a}`;
 };
 
-const dataHoraBR = (iso: string) =>
-  new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const dataHoraBR = dataHoraSP;
 
 function Card({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe?: string }) {
   return (
@@ -122,14 +122,13 @@ function Painel() {
   });
 
   const mCobranca = useMutation({
-    mutationFn: () =>
-      fnCobranca({
-        data: {
-          cliente_id: clienteId,
-          valor: Number(valor.replace(",", ".")),
-          vencimento,
-        },
-      }),
+    mutationFn: () => {
+      const valorNum = parseBRL(valor);
+      if (!Number.isFinite(valorNum) || valorNum <= 0) {
+        return Promise.reject(new Error("Informe um valor válido, ex: 1.500,00"));
+      }
+      return fnCobranca({ data: { cliente_id: clienteId, valor: valorNum, vencimento } });
+    },
     onSuccess: () => {
       setClienteId("");
       setValor("");
@@ -173,7 +172,7 @@ function Painel() {
     onError: (e: Error) => toast.error("Falha na rotina", { description: e.message }),
   });
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeSP();
 
   async function sair() {
     await supabase.auth.signOut();
@@ -184,9 +183,7 @@ function Painel() {
     <main className="mx-auto max-w-5xl px-4 py-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Controle de Cobrança
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Cobrança Certa</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lembretes de pagamento para serviços pontuais.
           </p>
@@ -281,9 +278,7 @@ function Painel() {
               <DialogFooter>
                 <Button
                   onClick={() => mCobranca.mutate()}
-                  disabled={
-                    !clienteId || !valor || !vencimento || mCobranca.isPending
-                  }
+                  disabled={!clienteId || !valor || !vencimento || mCobranca.isPending}
                 >
                   Salvar
                 </Button>
@@ -364,11 +359,7 @@ function Painel() {
                     <TableCell className="text-muted-foreground">{c.ultima_acao ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       {c.status === "pago" ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => mReabrir.mutate(c.id)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => mReabrir.mutate(c.id)}>
                           Reabrir
                         </Button>
                       ) : (

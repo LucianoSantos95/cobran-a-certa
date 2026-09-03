@@ -5,19 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-const EMAIL_AUTORIZADO = "oluciano.dosantos@gmail.com";
+import { EMAIL_AUTORIZADO } from "@/lib/acesso";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar | Controle de Cobrança" },
+      { title: "Entrar | Cobrança Certa" },
       {
         name: "description",
-        content:
-          "Acesso restrito ao Controle de Cobrança, o painel de lembretes automáticos de pagamento.",
+        content: "Acesso restrito ao painel Cobrança Certa, os lembretes automáticos de pagamento.",
       },
-      { property: "og:title", content: "Entrar | Controle de Cobrança" },
+      { property: "og:title", content: "Entrar | Cobrança Certa" },
       {
         property: "og:description",
         content: "Acesso restrito ao painel de cobranças e lembretes automáticos.",
@@ -55,44 +53,21 @@ function AuthPage() {
       email: normalizado,
       password: senha,
     });
-    if (error) {
-      if (error.message.toLowerCase().includes("invalid login")) {
-        const { error: erroCadastro } = await supabase.auth.signUp({
-          email: normalizado,
-          password: senha,
-        });
-        if (erroCadastro) {
-          setCarregando(false);
-          toast.error("Não foi possível entrar", { description: erroCadastro.message });
-          return;
-        }
-        const { error: erroLogin } = await supabase.auth.signInWithPassword({
-          email: normalizado,
-          password: senha,
-        });
-        if (erroLogin) {
-          setCarregando(false);
-          toast.error("Conta criada", {
-            description: "Confirme o e-mail recebido e entre novamente.",
-          });
-          return;
-        }
-      } else {
-        setCarregando(false);
-        toast.error("Não foi possível entrar", { description: error.message });
-        return;
-      }
-    }
     setCarregando(false);
+    if (error) {
+      const invalido = error.message.toLowerCase().includes("invalid login");
+      toast.error("Não foi possível entrar", {
+        description: invalido ? "E-mail ou senha incorretos." : error.message,
+      });
+      return;
+    }
     navigate({ to: "/" });
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Controle de Cobrança
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Cobrança Certa</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Acesso restrito durante a fase de validação.
         </p>
@@ -128,7 +103,7 @@ function AuthPage() {
             {carregando ? "Entrando..." : "Entrar"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Sem cadastro público: a conta autorizada é criada automaticamente no primeiro acesso.
+            Sem cadastro público. Apenas a conta autorizada tem acesso nesta fase.
           </p>
         </form>
       </div>

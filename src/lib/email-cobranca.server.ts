@@ -2,6 +2,8 @@
  * Envio de e-mails de cobrança através do e-mail gerenciado da plataforma.
  */
 import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { EMAIL_RESPOSTA } from "./acesso";
+import { diasDeAtraso } from "./datas";
 
 export const EMAIL_NAO_CONFIGURADO = "EMAIL_NAO_CONFIGURADO";
 
@@ -29,12 +31,6 @@ function formatarData(iso: string): string {
   return `${dia}/${mes}/${ano}`;
 }
 
-function diasDeAtraso(vencimento: string): number {
-  const venc = new Date(`${vencimento.slice(0, 10)}T00:00:00Z`).getTime();
-  const hoje = Date.now();
-  return Math.max(0, Math.floor((hoje - venc) / 86_400_000));
-}
-
 /**
  * Envia o e-mail correspondente ao estágio da cobrança.
  * Lança erro quando o envio falha; retorna silenciosamente quando o
@@ -52,11 +48,10 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
       nomeCliente: dados.nomeCliente,
       valorFormatado: formatarValor(dados.valor),
       vencimentoFormatado: formatarData(dados.vencimento),
-      ...(dados.tipo === "cobranca_atrasada"
-        ? { diasAtraso: diasDeAtraso(dados.vencimento) }
-        : {}),
+      ...(dados.tipo === "cobranca_atrasada" ? { diasAtraso: diasDeAtraso(dados.vencimento) } : {}),
     },
     idempotencyKey: `${templateName}-${dados.cobrancaId}`,
+    replyTo: EMAIL_RESPOSTA,
   });
 
   if (!result.sent) {

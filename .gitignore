@@ -16,6 +16,17 @@ dist-ssr
 .nitro
 *.local
 
+# Env: o .env versionado só tem chaves públicas (VITE_/publishable), que o
+# Lovable sincroniza. Qualquer arquivo com segredo real fica fora do git.
+.env.local
+.env.*.local
+.env.secret
+.env.production
+.env.*.secret
+
+# Projeto usa bun (bun.lock). Lockfile do npm não entra no repo.
+package-lock.json
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireUsuarioAutorizado } from "./require-allowed-user";
+import { dataCurtaSP, hojeSP, somaDias } from "./datas";
 import {
   EMAIL_NAO_CONFIGURADO,
   emailConfigurado,
@@ -8,7 +9,11 @@ import {
   type TipoEnvio,
 } from "./email-cobranca.server";
 
-export const EMAIL_AUTORIZADO = "oluciano.dosantos@gmail.com";
+/** Erro de infra logado no servidor; o cliente recebe só a mensagem amigável. */
+function falha(mensagem: string, causa: unknown): never {
+  console.error("[cobranca]", mensagem, causa);
+  throw new Error(mensagem);
+}
 
 export interface EnvioDTO {
   id: string;
@@ -44,19 +49,12 @@ export interface MetricasDTO {
   recebidoNoMes: number;
 }
 
-const hojeISO = () => new Date().toISOString().slice(0, 10);
-
 function rotuloTipo(tipo: TipoEnvio) {
   return tipo === "lembrete" ? "Lembrete" : "Cobrança";
 }
 
-function dataCurta(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
 export const carregarPainel = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
@@ -74,9 +72,9 @@ export const carregarPainel = createServerFn({ method: "GET" })
         .order("data_envio", { ascending: false }),
     ]);
 
-    if (clientesRes.error) throw new Error(clientesRes.error.message);
-    if (cobrancasRes.error) throw new Error(cobrancasRes.error.message);
-    if (enviosRes.error) throw new Error(enviosRes.error.message);
+    if (clientesRes.error) falha("Não foi possível carregar o painel.", clientesRes.error);
+    if (cobrancasRes.error) falha("Não foi possível carregar o painel.", cobrancasRes.error);
+    if (enviosRes.error) falha("Não foi possível carregar o painel.", enviosRes.error);
 
     const clientes: ClienteDTO[] = clientesRes.data ?? [];
     const mapaCliente = new Map(clientes.map((c) => [c.id, c]));
@@ -97,7 +95,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
         ultima_acao: ultimo
           ? `${rotuloTipo(ultimo.tipo as TipoEnvio)} ${
               ultimo.status_envio === "enviado" ? "enviado" : "falhou"
-            } ${dataCurta(ultimo.data_envio)}`
+            } ${dataCurtaSP(ultimo.data_envio)}`
           : null,
       };
     });
@@ -112,7 +110,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
       cliente_nome: mapaCobranca.get(e.cobranca_id)?.cliente_nome ?? "—",
     }));
 
-    const hoje = hojeISO();
+    const hoje = hojeSP();
     const inicioMes = `${hoje.slice(0, 7)}-01`;
 
     const pendentes = cobrancas.filter((c) => c.status !== "pago");
@@ -160,7 +158,7 @@ const clienteSchema = z.object({
 });
 
 export const criarCliente = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .inputValidator((data: unknown) => clienteSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("clientes").insert({
@@ -168,7 +166,7 @@ export const criarCliente = createServerFn({ method: "POST" })
       nome: data.nome,
       email: data.email.toLowerCase(),
     });
-    if (error) throw new Error(error.message);
+    if (error) falha("Não foi possível cadastrar o cliente.", error);
     return { ok: true };
   });
 
@@ -179,9 +177,19 @@ const cobrancaSchema = z.object({
 });
 
 export const criarCobranca = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .inputValidator((data: unknown) => cobrancaSchema.parse(data))
   .handler(async ({ data, context }) => {
+    // Garante que o cliente é do próprio usuário antes de vincular a cobrança.
+    const { data: cliente, error: erroCliente } = await context.supabase
+      .from("clientes")
+      .select("id")
+      .eq("id", data.cliente_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (erroCliente) falha("Não foi possível cadastrar a cobrança.", erroCliente);
+    if (!cliente) throw new Error("Cliente não encontrado.");
+
     const { error } = await context.supabase.from("cobrancas").insert({
       user_id: context.userId,
       cliente_id: data.cliente_id,
@@ -189,12 +197,12 @@ export const criarCobranca = createServerFn({ method: "POST" })
       vencimento: data.vencimento,
       status: "pendente",
     });
-    if (error) throw new Error(error.message);
+    if (error) falha("Não foi possível cadastrar a cobrança.", error);
     return { ok: true };
   });
 
 export const marcarComoPaga = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -202,12 +210,12 @@ export const marcarComoPaga = createServerFn({ method: "POST" })
       .update({ status: "pago", pago_em: new Date().toISOString() })
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) falha("Não foi possível marcar como paga.", error);
     return { ok: true };
   });
 
 export const reabrirCobranca = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -215,28 +223,31 @@ export const reabrirCobranca = createServerFn({ method: "POST" })
       .update({ status: "pendente", pago_em: null })
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) falha("Não foi possível reabrir a cobrança.", error);
     return { ok: true };
   });
 
 /**
  * Rotina diária de cobrança (por enquanto disparada manualmente).
- * Regras fixas: lembrete no dia do vencimento; cobrança 7 dias após o
- * vencimento. Apenas cobranças pendentes e no máximo um envio por tipo.
+ * Regras fixas, no fuso de São Paulo:
+ *  - lembrete: do vencimento até o 7º dia de atraso, se ainda não enviado;
+ *  - cobrança atrasada: a partir do 7º dia de atraso, se ainda não enviada.
+ * Cada rodada manda no máximo uma mensagem por cobrança pendente, e o
+ * índice único em `envios` impede repetir um envio bem-sucedido.
  */
 export const rodarCobrancas = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireUsuarioAutorizado])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const hoje = hojeISO();
-    const seteDiasAtras = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const hoje = hojeSP();
+    const seteDiasAtras = somaDias(hoje, -7);
 
     const { data: cobrancas, error } = await supabase
       .from("cobrancas")
       .select("id, cliente_id, valor, vencimento, status")
       .eq("user_id", userId)
       .eq("status", "pendente");
-    if (error) throw new Error(error.message);
+    if (error) falha("Não foi possível rodar as cobranças.", error);
 
     const { data: enviosExistentes } = await supabase
       .from("envios")
@@ -253,10 +264,12 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
 
     const pendentesDeEnvio: { cobrancaId: string; tipo: TipoEnvio }[] = [];
     for (const c of cobrancas ?? []) {
-      if (c.vencimento === hoje && !jaEnviado.has(`${c.id}:lembrete`)) {
+      const naJanelaDoLembrete = c.vencimento <= hoje && c.vencimento > seteDiasAtras;
+      const atrasoFirme = c.vencimento <= seteDiasAtras;
+
+      if (naJanelaDoLembrete && !jaEnviado.has(`${c.id}:lembrete`)) {
         pendentesDeEnvio.push({ cobrancaId: c.id, tipo: "lembrete" });
-      }
-      if (c.vencimento <= seteDiasAtras && !jaEnviado.has(`${c.id}:cobranca_atrasada`)) {
+      } else if (atrasoFirme && !jaEnviado.has(`${c.id}:cobranca_atrasada`)) {
         pendentesDeEnvio.push({ cobrancaId: c.id, tipo: "cobranca_atrasada" });
       }
     }

@@ -25,7 +25,7 @@ const Email = ({
   valorFormatado = "—",
   vencimentoFormatado = "—",
   diasAtraso,
-  remetente = "Controle de Cobrança",
+  remetente = "Cobrança Certa",
 }: Props) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
@@ -77,7 +77,12 @@ const box = {
   padding: "16px 18px",
   margin: "18px 0",
 };
-const label = { fontSize: "12px", color: "#7a8784", margin: "0 0 2px", textTransform: "uppercase" as const };
+const label = {
+  fontSize: "12px",
+  color: "#7a8784",
+  margin: "0 0 2px",
+  textTransform: "uppercase" as const,
+};
 const value = { fontSize: "17px", color: "#1f2d2b", margin: "0 0 12px", fontWeight: 600 };
 const hr = { borderColor: "#e4e8e5", margin: "24px 0 12px" };
 const footer = { fontSize: "12px", color: "#7a8784" };
