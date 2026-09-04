@@ -3,7 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Lock,
+  MessageCircle,
+  Pencil,
+  Send,
+  Sparkles,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
 import { CobrancaDialog } from "@/components/cobranca-dialog";
@@ -246,6 +255,25 @@ function Painel() {
         </div>
       </header>
 
+      {!isLoading && (data?.clientes.length ?? 0) === 0 ? (
+        <BlurFade delay={0.04}>
+          <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                <Sparkles className="size-4" />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-foreground">Bem-vindo! Vamos começar.</p>
+                <p className="text-sm text-muted-foreground">
+                  Cadastre seu primeiro cliente e depois a primeira cobrança dele.
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => setClienteAberto(true)}>Cadastrar meu primeiro cliente</Button>
+          </section>
+        </BlurFade>
+      ) : null}
+
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
@@ -466,8 +494,25 @@ function Painel() {
               })}
               {!isLoading && (data?.cobrancas.length ?? 0) === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    Nenhuma cobrança cadastrada ainda.
+                  <TableCell colSpan={6} className="py-12 text-center">
+                    <div className="mx-auto flex max-w-xs flex-col items-center gap-2">
+                      <FileText className="size-8 text-muted-foreground/50" />
+                      {(data?.clientes.length ?? 0) === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Cadastre um cliente primeiro — depois é só criar a cobrança dele.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            Nenhuma cobrança cadastrada ainda.
+                          </p>
+                          <CobrancaDialog
+                            clientes={data?.clientes ?? []}
+                            trigger={<Button size="sm">Cadastrar primeira cobrança</Button>}
+                          />
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -503,8 +548,15 @@ function Painel() {
               ))}
               {!isLoading && (data?.envios.length ?? 0) === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
-                    Nenhum envio registrado ainda.
+                  <TableCell colSpan={4} className="py-12 text-center">
+                    <div className="mx-auto flex max-w-xs flex-col items-center gap-2">
+                      <Send className="size-8 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">
+                        {(data?.cobrancas.length ?? 0) === 0
+                          ? "Assim que você cadastrar uma cobrança e ela for enviada, o histórico aparece aqui."
+                          : 'Nenhum envio ainda. Clique em "Rodar cobranças agora" quando tiver um vencimento pra testar.'}
+                      </p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -513,9 +565,21 @@ function Painel() {
         </div>
       </BlurFade>
 
-      {(data?.clientes.length ?? 0) > 0 ? (
-        <BlurFade inView className="mt-10 mb-4 block">
-          <h2 className="text-lg font-medium text-foreground">Clientes</h2>
+      <BlurFade inView className="mt-10 mb-4 block">
+        <h2 className="text-lg font-medium text-foreground">Clientes</h2>
+        {(data?.clientes.length ?? 0) === 0 ? (
+          !isLoading ? (
+            <div className="mt-3 flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 p-8 text-center">
+              <UserPlus className="size-8 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                Nenhum cliente cadastrado ainda. Cadastre quem você cobra pra começar.
+              </p>
+              <Button size="sm" onClick={() => setClienteAberto(true)}>
+                Novo cliente
+              </Button>
+            </div>
+          ) : null
+        ) : (
           <ul className="mt-3 divide-y rounded-xl border bg-card">
             {(data?.clientes ?? []).map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
@@ -559,8 +623,8 @@ function Painel() {
               </li>
             ))}
           </ul>
-        </BlurFade>
-      ) : null}
+        )}
+      </BlurFade>
     </main>
   );
 }
