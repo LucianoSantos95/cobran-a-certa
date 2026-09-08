@@ -23,7 +23,7 @@ export interface DadosEmailCobranca {
 }
 
 export function emailConfigurado(): boolean {
-  return Boolean(process.env["LOVABLE_API_KEY"]);
+  return resendConfigurado();
 }
 
 function formatarValor(valor: number): string {
