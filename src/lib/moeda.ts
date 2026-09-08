@@ -40,3 +40,22 @@ export function parseBRL(entrada: string): number {
   const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
 }
+
+/**
+ * Máscara "centavos primeiro" para campo de valor: só os dígitos entram e os
+ * dois últimos são sempre os centavos. Digitar 8-2-0-0-0-0 -> "8.200,00".
+ * Retorna "" quando não há dígito significativo.
+ */
+export function mascararBRL(entrada: string): string {
+  const digitos = entrada.replace(/\D/g, "").replace(/^0+/, "");
+  if (!digitos) return "";
+  const cents = digitos.padStart(3, "0");
+  const inteiro = cents.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${inteiro},${cents.slice(-2)}`;
+}
+
+/** Número -> string da máscara: 8200 -> "8.200,00" (vazio se <= 0). */
+export function numeroParaMascaraBRL(valor: number): string {
+  if (!Number.isFinite(valor) || valor <= 0) return "";
+  return mascararBRL(String(Math.round(valor * 100)));
+}

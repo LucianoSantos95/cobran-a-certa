@@ -8,7 +8,8 @@ import {
   type CobrancaDTO,
   type Frequencia,
 } from "@/lib/cobranca.functions";
-import { parseBRL } from "@/lib/moeda";
+import { numeroParaMascaraBRL, parseBRL } from "@/lib/moeda";
+import { MoedaInput } from "@/components/moeda-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,7 +53,7 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
     if (!aberto) return;
     setClienteId(cobranca?.cliente_id ?? "");
     setDescricao(cobranca?.descricao ?? "");
-    setValor(cobranca ? String(cobranca.valor).replace(".", ",") : "");
+    setValor(cobranca ? numeroParaMascaraBRL(cobranca.valor) : "");
     setVencimento(cobranca?.vencimento?.slice(0, 10) ?? "");
     setFrequencia(cobranca?.frequencia ?? "unica");
   }, [aberto, cobranca]);
@@ -117,14 +118,8 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cb-valor">Valor (R$)</Label>
-            <Input
-              id="cb-valor"
-              inputMode="decimal"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder="1500,00"
-            />
+            <Label htmlFor="cb-valor">Valor</Label>
+            <MoedaInput id="cb-valor" value={valor} onChange={setValor} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="cb-venc">Vencimento</Label>
