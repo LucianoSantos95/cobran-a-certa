@@ -6,7 +6,7 @@ Hoje a tela de entrada já mostra o botão "Entrar com Google", mas ele usa um c
 
 1. Habilitar o provedor Google no backend (credenciais gerenciadas pela Lovable, sem você precisar criar nada no Google).
 2. Trocar o botão da tela de entrada para o fluxo oficial de login com Google, que funciona tanto na pré-visualização quanto no site publicado.
-3. Manter a restrição desta fase: só a conta **oluciano.dosantos@gmail.com** entra. Quem tentar com outra conta Google é desconectado na hora e vê o aviso "Acesso restrito".
+3. Liberar o acesso: qualquer pessoa com conta Google poderá entrar e usar o app, vendo apenas os próprios clientes e cobranças. A restrição a uma única conta é removida.
 4. Manter também a entrada por e-mail e senha como está.
 5. Voltar para o painel automaticamente assim que o login for confirmado.
 
