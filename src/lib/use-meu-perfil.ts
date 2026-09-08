@@ -20,7 +20,17 @@ export function useMeuPerfil(userId: string) {
         .select("nome, avatar_url")
         .eq("id", userId)
         .maybeSingle();
-      return { nome: data?.nome ?? "", avatar_url: data?.avatar_url ?? null };
+      let url: string | null = null;
+      const guardado = data?.avatar_url ?? null;
+      if (guardado) {
+        // O bucket é privado: guardamos só o caminho e assinamos na leitura.
+        const { data: assinada } = await supabase.storage
+          .from("avatars")
+          .createSignedUrl(guardado, 60 * 60);
+        url = assinada?.signedUrl ?? null;
+      }
+      return { nome: data?.nome ?? "", avatar_url: url };
     },
+
   });
 }

@@ -83,11 +83,10 @@ function PerfilCard() {
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (up.error) throw new Error(up.error.message);
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      const url = `${pub.publicUrl}?v=${Date.now()}`;
       const { error } = await supabase
         .from("profiles")
-        .update({ avatar_url: url })
+        .update({ avatar_url: path })
+
         .eq("id", user.id);
       if (error) throw new Error(error.message);
       toast.success("Foto atualizada");
