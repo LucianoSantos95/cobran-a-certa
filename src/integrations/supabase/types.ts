@@ -21,7 +21,6 @@ export type Database = {
           id: string
           nome: string
           user_id: string
-          whatsapp: string
         }
         Insert: {
           criado_em?: string
@@ -29,7 +28,6 @@ export type Database = {
           id?: string
           nome: string
           user_id: string
-          whatsapp?: string
         }
         Update: {
           criado_em?: string
@@ -37,7 +35,6 @@ export type Database = {
           id?: string
           nome?: string
           user_id?: string
-          whatsapp?: string
         }
         Relationships: []
       }
@@ -45,8 +42,6 @@ export type Database = {
         Row: {
           cliente_id: string
           criado_em: string
-          descricao: string
-          frequencia: string
           id: string
           pago_em: string | null
           status: string
@@ -57,8 +52,6 @@ export type Database = {
         Insert: {
           cliente_id: string
           criado_em?: string
-          descricao?: string
-          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string
@@ -69,8 +62,6 @@ export type Database = {
         Update: {
           cliente_id?: string
           criado_em?: string
-          descricao?: string
-          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string
@@ -125,78 +116,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      feedback: {
-        Row: {
-          criado_em: string
-          email: string
-          estrelas: number | null
-          id: string
-          mensagem: string | null
-          nome: string
-          user_id: string
-        }
-        Insert: {
-          criado_em?: string
-          email?: string
-          estrelas?: number | null
-          id?: string
-          mensagem?: string | null
-          nome?: string
-          user_id: string
-        }
-        Update: {
-          criado_em?: string
-          email?: string
-          estrelas?: number | null
-          id?: string
-          mensagem?: string | null
-          nome?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          criado_em: string
-          email: string
-          id: string
-          nome: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          criado_em?: string
-          email?: string
-          id: string
-          nome?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          criado_em?: string
-          email?: string
-          id?: string
-          nome?: string
-        }
-        Relationships: []
-      }
-      perfil_cobranca: {
-        Row: {
-          atualizado_em: string
-          instrucoes_pagamento: string
-          user_id: string
-        }
-        Insert: {
-          atualizado_em?: string
-          instrucoes_pagamento?: string
-          user_id: string
-        }
-        Update: {
-          atualizado_em?: string
-          instrucoes_pagamento?: string
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
