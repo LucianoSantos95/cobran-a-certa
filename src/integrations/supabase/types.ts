@@ -21,6 +21,7 @@ export type Database = {
           id: string
           nome: string
           user_id: string
+          whatsapp: string
         }
         Insert: {
           criado_em?: string
@@ -28,6 +29,7 @@ export type Database = {
           id?: string
           nome: string
           user_id: string
+          whatsapp?: string
         }
         Update: {
           criado_em?: string
@@ -35,6 +37,7 @@ export type Database = {
           id?: string
           nome?: string
           user_id?: string
+          whatsapp?: string
         }
         Relationships: []
       }
@@ -42,6 +45,8 @@ export type Database = {
         Row: {
           cliente_id: string
           criado_em: string
+          descricao: string
+          frequencia: string
           id: string
           pago_em: string | null
           status: string
@@ -52,6 +57,8 @@ export type Database = {
         Insert: {
           cliente_id: string
           criado_em?: string
+          descricao?: string
+          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string
@@ -62,6 +69,8 @@ export type Database = {
         Update: {
           cliente_id?: string
           criado_em?: string
+          descricao?: string
+          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string
