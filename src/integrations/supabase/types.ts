@@ -177,42 +177,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tickets: {
-        Row: {
-          atualizado_em: string
-          criado_em: string
-          email: string
-          id: string
-          mensagem: string
-          nome: string
-          resposta_admin: string | null
-          status: string
-          user_id: string
-        }
-        Insert: {
-          atualizado_em?: string
-          criado_em?: string
-          email: string
-          id?: string
-          mensagem: string
-          nome: string
-          resposta_admin?: string | null
-          status?: string
-          user_id: string
-        }
-        Update: {
-          atualizado_em?: string
-          criado_em?: string
-          email?: string
-          id?: string
-          mensagem?: string
-          nome?: string
-          resposta_admin?: string | null
-          status?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
