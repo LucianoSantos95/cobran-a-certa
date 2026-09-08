@@ -16,12 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({ meta: [{ title: "Minha conta | Cobrança Certa" }] }),
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if ((data.user?.email ?? "").toLowerCase() !== EMAIL_AUTORIZADO) {
-      throw redirect({ to: "/" });
-    }
-  },
   component: Configuracoes,
 });
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { EMAIL_AUTORIZADO } from "@/lib/acesso";
+import { lovable } from "@/integrations/lovable/index";
 
 const FLUTUANTES = [
   { Icon: QrCode, top: "12%", left: "14%", size: 72, dur: 9, delay: 0 },
@@ -100,17 +100,9 @@ function AuthPage() {
   const [google, setGoogle] = useState(false);
 
   useEffect(() => {
-    const decidir = async (session: { user: { email?: string } } | null) => {
+    const decidir = (session: { user: { email?: string } } | null) => {
       if (!session) return;
-      const e = (session.user.email ?? "").toLowerCase();
-      if (e === EMAIL_AUTORIZADO) {
-        navigate({ to: "/" });
-      } else {
-        await supabase.auth.signOut();
-        toast.error("Acesso restrito", {
-          description: "Apenas a conta autorizada pode entrar nesta fase.",
-        });
-      }
+      navigate({ to: "/" });
     };
     supabase.auth.getSession().then(({ data }) => decidir(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => decidir(session));
@@ -120,12 +112,6 @@ function AuthPage() {
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     const normalizado = email.trim().toLowerCase();
-    if (normalizado !== EMAIL_AUTORIZADO) {
-      toast.error("Acesso restrito", {
-        description: "Nesta fase de validação apenas a conta autorizada pode entrar.",
-      });
-      return;
-    }
     setCarregando(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: normalizado,
@@ -144,17 +130,19 @@ function AuthPage() {
 
   async function entrarComGoogle() {
     setGoogle(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth`,
-        queryParams: { prompt: "select_account" },
-      },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+      extraParams: { prompt: "select_account" },
     });
-    if (error) {
+    if (result.error) {
       setGoogle(false);
-      toast.error("Não foi possível abrir o Google", { description: error.message });
+      toast.error("Não foi possível entrar com o Google", {
+        description: result.error.message ?? "Tente novamente em instantes.",
+      });
+      return;
     }
+    if (result.redirected) return;
+    navigate({ to: "/" });
   }
 
   return (
@@ -223,7 +211,8 @@ function AuthPage() {
           </Button>
 
           <p className="mt-6 text-xs text-muted-foreground">
-            Sem cadastro público. Apenas a conta autorizada tem acesso nesta fase.
+            Ao entrar com o Google sua conta é criada automaticamente. Você vê apenas os seus
+            próprios clientes e cobranças.
           </p>
         </div>
       </div>
