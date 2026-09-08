@@ -46,6 +46,7 @@ export type Database = {
           cliente_id: string
           criado_em: string
           descricao: string
+          frequencia: string
           id: string
           pago_em: string | null
           status: string
@@ -57,6 +58,7 @@ export type Database = {
           cliente_id: string
           criado_em?: string
           descricao?: string
+          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string
@@ -68,6 +70,7 @@ export type Database = {
           cliente_id?: string
           criado_em?: string
           descricao?: string
+          frequencia?: string
           id?: string
           pago_em?: string | null
           status?: string

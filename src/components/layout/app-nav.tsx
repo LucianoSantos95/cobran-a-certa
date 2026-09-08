@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EMAIL_AUTORIZADO } from "@/lib/acesso";
+import { useMeuPerfil } from "@/lib/use-meu-perfil";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,17 +17,7 @@ export function AppNav({ userId, email }: { userId: string; email: string }) {
   const navigate = useNavigate();
   const isAdmin = email.trim().toLowerCase() === EMAIL_AUTORIZADO;
 
-  const { data: perfil } = useQuery({
-    queryKey: ["meu-perfil", userId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("nome, avatar_url")
-        .eq("id", userId)
-        .maybeSingle();
-      return data ?? { nome: "", avatar_url: null };
-    },
-  });
+  const { data: perfil } = useMeuPerfil(userId);
 
   const links = [
     { to: "/", label: "Painel" },

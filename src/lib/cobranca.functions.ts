@@ -1,7 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireUsuarioAutorizado } from "./require-allowed-user";
-import { dataCurtaSP, diasDeAtraso, hojeSP, somaDias } from "./datas";
+import { dataCurtaSP, diasDeAtraso, hojeSP, somaDias, somaMeses } from "./datas";
+
+export type Frequencia = "unica" | "semanal" | "quinzenal" | "mensal";
+
+/** Próximo vencimento de uma cobrança recorrente, a partir do vencimento atual. */
+export function proximoVencimento(vencimento: string, frequencia: Frequencia): string {
+  if (frequencia === "semanal") return somaDias(vencimento, 7);
+  if (frequencia === "quinzenal") return somaDias(vencimento, 14);
+  return somaMeses(vencimento, 1);
+}
 import {
   EMAIL_NAO_CONFIGURADO,
   emailConfigurado,
@@ -31,6 +40,7 @@ export interface CobrancaDTO {
   cliente_email: string;
   cliente_whatsapp: string;
   descricao: string;
+  frequencia: Frequencia;
   valor: number;
   vencimento: string;
   status: "pendente" | "pago";
@@ -77,7 +87,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
         .order("nome"),
       supabase
         .from("cobrancas")
-        .select("id, cliente_id, descricao, valor, vencimento, status, pago_em")
+        .select("id, cliente_id, descricao, frequencia, valor, vencimento, status, pago_em")
         .eq("user_id", userId)
         .order("vencimento", { ascending: true }),
       supabase
@@ -114,6 +124,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
         cliente_email: cliente?.email ?? "",
         cliente_whatsapp: cliente?.whatsapp ?? "",
         descricao: c.descricao ?? "",
+        frequencia: (c.frequencia ?? "unica") as Frequencia,
         valor: Number(c.valor),
         vencimento: c.vencimento,
         status: c.status as "pendente" | "pago",
@@ -279,6 +290,7 @@ const cobrancaSchema = z.object({
   valor: z.number().positive("Valor deve ser maior que zero").max(99999999),
   vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   descricao: z.string().trim().max(200).optional().default(""),
+  frequencia: z.enum(["unica", "semanal", "quinzenal", "mensal"]).optional().default("unica"),
 });
 
 export const criarCobranca = createServerFn({ method: "POST" })
@@ -301,6 +313,7 @@ export const criarCobranca = createServerFn({ method: "POST" })
       valor: data.valor,
       vencimento: data.vencimento,
       descricao: data.descricao,
+      frequencia: data.frequencia,
       status: "pendente",
     });
     if (error) falha("Não foi possível cadastrar a cobrança.", error);
@@ -327,6 +340,7 @@ export const editarCobranca = createServerFn({ method: "POST" })
         valor: data.valor,
         vencimento: data.vencimento,
         descricao: data.descricao,
+        frequencia: data.frequencia,
       })
       .eq("id", data.id)
       .eq("user_id", context.userId);
@@ -351,13 +365,35 @@ export const marcarComoPaga = createServerFn({ method: "POST" })
   .middleware([requireUsuarioAutorizado])
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: paga, error } = await context.supabase
       .from("cobrancas")
       .update({ status: "pago", pago_em: new Date().toISOString() })
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId)
+      .select("cliente_id, valor, vencimento, descricao, frequencia")
+      .maybeSingle();
     if (error) falha("Não foi possível marcar como paga.", error);
-    return { ok: true };
+
+    // Recorrente: gera a próxima parcela a partir do vencimento desta.
+    let proximo: string | null = null;
+    const freq = (paga?.frequencia ?? "unica") as Frequencia;
+    if (paga && freq !== "unica") {
+      proximo = proximoVencimento(paga.vencimento, freq);
+      const { error: erroProx } = await context.supabase.from("cobrancas").insert({
+        user_id: context.userId,
+        cliente_id: paga.cliente_id,
+        valor: paga.valor,
+        vencimento: proximo,
+        descricao: paga.descricao,
+        frequencia: freq,
+        status: "pendente",
+      });
+      if (erroProx) {
+        console.error("[cobranca] próxima recorrência", erroProx);
+        proximo = null;
+      }
+    }
+    return { ok: true, proximoVencimento: proximo };
   });
 
 export const reabrirCobranca = createServerFn({ method: "POST" })

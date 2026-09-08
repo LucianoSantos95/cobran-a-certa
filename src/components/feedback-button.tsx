@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { motion, useReducedMotion } from "framer-motion";
 import { MessageSquarePlus, Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { enviarFeedback } from "@/lib/feedback.functions";
+import { useMeuPerfil } from "@/lib/use-meu-perfil";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,19 +50,10 @@ function Estrelas({ value, onChange }: { value: number; onChange: (n: number) =>
 
 export function FeedbackButton({ userId, email }: { userId: string; email: string }) {
   const enviar = useServerFn(enviarFeedback);
+  const reduce = useReducedMotion();
   const [aberto, setAberto] = useState(false);
 
-  const { data: perfil } = useQuery({
-    queryKey: ["meu-perfil", userId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("nome")
-        .eq("id", userId)
-        .maybeSingle();
-      return data ?? { nome: "" };
-    },
-  });
+  const { data: perfil } = useMeuPerfil(userId);
 
   const [nome, setNome] = useState("");
   const [emailInput, setEmailInput] = useState(email);
@@ -125,16 +117,28 @@ export function FeedbackButton({ userId, email }: { userId: string; email: strin
         if (!v) marcarPrompted();
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="secondary"
-          className="fixed right-4 bottom-4 z-50 gap-2 shadow-lg"
+      <motion.div
+        className="fixed right-4 bottom-4 z-50"
+        initial={reduce ? { y: 0, opacity: 1 } : { y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.6, type: "spring", stiffness: 260, damping: 22 }}
+      >
+        <motion.div
+          animate={reduce ? { scale: 1 } : { scale: [1, 1.06, 1] }}
+          transition={
+            reduce
+              ? { duration: 0 }
+              : { duration: 1.1, repeat: Infinity, repeatDelay: 7, ease: "easeInOut" }
+          }
         >
-          <MessageSquarePlus className="size-4" />
-          Feedback
-        </Button>
-      </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2 shadow-lg shadow-primary/25">
+              <MessageSquarePlus className="size-4" />
+              Feedback
+            </Button>
+          </DialogTrigger>
+        </motion.div>
+      </motion.div>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Dar um feedback</DialogTitle>

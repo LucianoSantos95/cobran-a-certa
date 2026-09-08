@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EMAIL_AUTORIZADO } from "@/lib/acesso";
 import { carregarPerfil, salvarPerfil } from "@/lib/perfil.functions";
+import { useMeuPerfil } from "@/lib/use-meu-perfil";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,17 +30,7 @@ function PerfilCard() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { data: perfil } = useQuery({
-    queryKey: ["meu-perfil", user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("nome, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
-      return data ?? { nome: "", avatar_url: null as string | null };
-    },
-  });
+  const { data: perfil } = useMeuPerfil(user.id);
 
   const [nome, setNome] = useState("");
   const [nomeTocado, setNomeTocado] = useState(false);

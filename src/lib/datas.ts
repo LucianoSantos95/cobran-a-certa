@@ -56,6 +56,23 @@ export function somaDias(dia: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Soma n meses a uma data YYYY-MM-DD, mantendo o dia do mês quando possível
+ * (31/jan + 1 mês -> 28/fev, não 03/mar).
+ */
+export function somaMeses(dia: string, n: number): string {
+  const partes = dia.slice(0, 10).split("-");
+  const ano = Number(partes[0] ?? 0);
+  const mes0 = Number(partes[1] ?? 1) - 1;
+  const d = Number(partes[2] ?? 1);
+  const alvoMes = mes0 + n;
+  const anoAlvo = ano + Math.floor(alvoMes / 12);
+  const mesAlvo = ((alvoMes % 12) + 12) % 12;
+  const ultimoDia = new Date(Date.UTC(anoAlvo, mesAlvo + 1, 0)).getUTCDate();
+  const diaAlvo = Math.min(d, ultimoDia);
+  return new Date(Date.UTC(anoAlvo, mesAlvo, diaAlvo)).toISOString().slice(0, 10);
+}
+
 /** Dias de atraso de um vencimento (YYYY-MM-DD) em relação a hoje. Nunca negativo. */
 export function diasDeAtraso(vencimento: string): number {
   const venc = Date.parse(`${vencimento.slice(0, 10)}T00:00:00Z`);

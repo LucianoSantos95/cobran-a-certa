@@ -139,8 +139,12 @@ function Painel() {
 
   const mPaga = useMutation({
     mutationFn: (id: string) => fnPaga({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Cobrança marcada como paga");
+    onSuccess: (r) => {
+      toast.success("Cobrança marcada como paga", {
+        description: r.proximoVencimento
+          ? `Próxima cobrança gerada para ${dataBR(r.proximoVencimento)}.`
+          : undefined,
+      });
       invalidar();
     },
   });
@@ -313,11 +317,22 @@ function Painel() {
           <p className="text-sm text-muted-foreground">
             Disparo manual durante a validação: o envio automático diário entra depois desta fase.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => mRodar.mutate()} disabled={mRodar.isPending}>
-              {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
-            </Button>
-            <TooltipProvider delayDuration={100}>
+          <TooltipProvider delayDuration={100}>
+            <div className="flex flex-wrap gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    onClick={() => mRodar.mutate()}
+                    disabled={mRodar.isPending}
+                  >
+                    {mRodar.isPending ? "Rodando..." : "Rodar cobranças agora"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Envia por e-mail os lembretes e cobranças que estiverem no ponto.
+                </TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0} className="inline-flex">
@@ -329,8 +344,8 @@ function Painel() {
                 </TooltipTrigger>
                 <TooltipContent>Em breve</TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </div>
+            </div>
+          </TooltipProvider>
         </section>
       </BlurFade>
 
@@ -382,7 +397,14 @@ function Painel() {
                 return (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">
-                      {c.cliente_nome}
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {c.cliente_nome}
+                        {c.frequencia !== "unica" ? (
+                          <Badge variant="outline" className="font-normal capitalize">
+                            {c.frequencia}
+                          </Badge>
+                        ) : null}
+                      </span>
                       {c.descricao ? (
                         <div className="text-xs font-normal text-muted-foreground">
                           {c.descricao}

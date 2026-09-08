@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { criarCobranca, editarCobranca, type CobrancaDTO } from "@/lib/cobranca.functions";
+import {
+  criarCobranca,
+  editarCobranca,
+  type CobrancaDTO,
+  type Frequencia,
+} from "@/lib/cobranca.functions";
 import { parseBRL } from "@/lib/moeda";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +46,7 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [vencimento, setVencimento] = useState("");
+  const [frequencia, setFrequencia] = useState<Frequencia>("unica");
 
   useEffect(() => {
     if (!aberto) return;
@@ -48,6 +54,7 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
     setDescricao(cobranca?.descricao ?? "");
     setValor(cobranca ? String(cobranca.valor).replace(".", ",") : "");
     setVencimento(cobranca?.vencimento?.slice(0, 10) ?? "");
+    setFrequencia(cobranca?.frequencia ?? "unica");
   }, [aberto, cobranca]);
 
   const m = useMutation({
@@ -61,6 +68,7 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
         valor: v,
         vencimento,
         descricao: descricao.trim(),
+        frequencia,
       };
       return editando
         ? editar({ data: { ...payload, id: cobranca!.id } })
@@ -80,7 +88,7 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editando ? "Editar cobrança" : "Nova cobrança"}</DialogTitle>
-          <DialogDescription>Cliente, descrição, valor e vencimento.</DialogDescription>
+          <DialogDescription>Cliente, descrição, valor, vencimento e frequência.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -126,6 +134,25 @@ export function CobrancaDialog({ clientes, cobranca, trigger }: Props) {
               value={vencimento}
               onChange={(e) => setVencimento(e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Frequência</Label>
+            <Select value={frequencia} onValueChange={(v) => setFrequencia(v as Frequencia)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unica">Única (pontual)</SelectItem>
+                <SelectItem value="semanal">Semanal</SelectItem>
+                <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                <SelectItem value="mensal">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+            {frequencia !== "unica" ? (
+              <p className="text-xs text-muted-foreground">
+                Ao marcar esta como paga, a próxima é gerada automaticamente.
+              </p>
+            ) : null}
           </div>
         </div>
         <DialogFooter>
