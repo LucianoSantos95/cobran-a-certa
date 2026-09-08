@@ -62,8 +62,4 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
     idempotencyKey: `${templateName}-${dados.cobrancaId}`,
     replyTo: EMAIL_RESPOSTA,
   });
-
-  if (!result.sent) {
-    console.warn("Destinatário suprimido:", templateName, dados.cobrancaId);
-  }
 }
