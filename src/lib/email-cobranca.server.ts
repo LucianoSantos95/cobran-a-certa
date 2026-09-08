@@ -1,7 +1,7 @@
 /**
- * Envio de e-mails de cobrança através do e-mail gerenciado da plataforma.
+ * Envio de e-mails de cobrança pelo Resend (domínio próprio verificado).
  */
-import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { enviarTemplateResend, resendConfigurado } from "@/lib/resend.server";
 import { EMAIL_RESPOSTA } from "./acesso";
 import { diasDeAtraso } from "./datas";
 
@@ -23,7 +23,7 @@ export interface DadosEmailCobranca {
 }
 
 export function emailConfigurado(): boolean {
-  return Boolean(process.env["LOVABLE_API_KEY"]);
+  return resendConfigurado();
 }
 
 function formatarValor(valor: number): string {
@@ -50,7 +50,7 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
   const instrucoes = dados.instrucoesPagamento?.trim();
   const descricao = dados.descricao?.trim();
 
-  const result = await sendTemplateEmail(templateName, dados.para, {
+  await enviarTemplateResend(templateName, dados.para, {
     templateData: {
       nomeCliente: dados.nomeCliente,
       valorFormatado: formatarValor(dados.valor),
@@ -62,8 +62,4 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
     idempotencyKey: `${templateName}-${dados.cobrancaId}`,
     replyTo: EMAIL_RESPOSTA,
   });
-
-  if (!result.sent) {
-    console.warn("Destinatário suprimido:", templateName, dados.cobrancaId);
-  }
 }
