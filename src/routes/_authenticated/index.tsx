@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
 import { toast } from "sonner";
 import {
   FileText,
@@ -16,6 +15,7 @@ import {
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
 import { CobrancaDialog } from "@/components/cobranca-dialog";
+import { ClienteDialog } from "@/components/cliente-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   carregarPainel,
-  criarCliente,
   excluirCliente,
   excluirCobranca,
   marcarComoPaga,
@@ -41,17 +40,6 @@ import { formatarBRL } from "@/lib/moeda";
 import { dataHoraSP, hojeSP } from "@/lib/datas";
 import { linkWhats, mensagemWhats, telefoneWhats } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -95,7 +83,6 @@ const dataHoraBR = dataHoraSP;
 function Painel() {
   const queryClient = useQueryClient();
   const buscar = useServerFn(carregarPainel);
-  const fnCliente = useServerFn(criarCliente);
   const fnPaga = useServerFn(marcarComoPaga);
   const fnReabrir = useServerFn(reabrirCobranca);
   const fnExcluir = useServerFn(excluirCliente);
@@ -108,25 +95,6 @@ function Painel() {
   });
 
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ["painel"] });
-
-  const [clienteAberto, setClienteAberto] = useState(false);
-  const [nome, setNome] = useState("");
-  const [emailCliente, setEmailCliente] = useState("");
-  const [whatsCliente, setWhatsCliente] = useState("");
-
-  const mCliente = useMutation({
-    mutationFn: () =>
-      fnCliente({ data: { nome, email: emailCliente, whatsapp: whatsCliente.trim() } }),
-    onSuccess: () => {
-      setNome("");
-      setEmailCliente("");
-      setWhatsCliente("");
-      setClienteAberto(false);
-      toast.success("Cliente cadastrado");
-      invalidar();
-    },
-    onError: (e: Error) => toast.error("Erro ao cadastrar", { description: e.message }),
-  });
 
   const mExcluirCobranca = useMutation({
     mutationFn: (id: string) => fnExcluirCobranca({ data: { id } }),
@@ -198,60 +166,7 @@ function Painel() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Dialog open={clienteAberto} onOpenChange={setClienteAberto}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Novo cliente</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo cliente</DialogTitle>
-                <DialogDescription>
-                  Nome e e-mail para as cobranças. WhatsApp é opcional (usado no envio assistido).
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    maxLength={120}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email-cliente">E-mail</Label>
-                  <Input
-                    id="email-cliente"
-                    type="email"
-                    value={emailCliente}
-                    onChange={(e) => setEmailCliente(e.target.value)}
-                    maxLength={255}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="whats-cliente">WhatsApp (opcional)</Label>
-                  <Input
-                    id="whats-cliente"
-                    inputMode="tel"
-                    value={whatsCliente}
-                    onChange={(e) => setWhatsCliente(e.target.value)}
-                    maxLength={20}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={() => mCliente.mutate()}
-                  disabled={!nome.trim() || !emailCliente.trim() || mCliente.isPending}
-                >
-                  Salvar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
+          <ClienteDialog trigger={<Button variant="outline">Novo cliente</Button>} />
           <CobrancaDialog
             clientes={data?.clientes ?? []}
             trigger={<Button>Nova cobrança</Button>}
@@ -273,7 +188,7 @@ function Painel() {
                 </p>
               </div>
             </div>
-            <Button onClick={() => setClienteAberto(true)}>Cadastrar meu primeiro cliente</Button>
+            <ClienteDialog trigger={<Button>Cadastrar meu primeiro cliente</Button>} />
           </section>
         </BlurFade>
       ) : null}
@@ -427,7 +342,12 @@ function Painel() {
                         </div>
                       ) : null}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{c.ultima_acao ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {c.ultima_acao ?? "—"}
+                      {c.status !== "pago" && !c.cliente_envio_automatico ? (
+                        <div className="text-xs text-muted-foreground/70">envio manual</div>
+                      ) : null}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         {c.status !== "pago" && tel ? (
@@ -596,52 +516,70 @@ function Painel() {
               <p className="text-sm text-muted-foreground">
                 Nenhum cliente cadastrado ainda. Cadastre quem você cobra pra começar.
               </p>
-              <Button size="sm" onClick={() => setClienteAberto(true)}>
-                Novo cliente
-              </Button>
+              <ClienteDialog trigger={<Button size="sm">Novo cliente</Button>} />
             </div>
           ) : null
         ) : (
           <ul className="mt-3 divide-y rounded-xl border bg-card">
             {(data?.clientes ?? []).map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                <span className="min-w-0">
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="font-medium text-foreground">{c.nome}</span>
-                  <span className="ml-2 text-muted-foreground">{c.email}</span>
+                  <span className="text-muted-foreground">{c.email}</span>
                   {c.whatsapp ? (
-                    <span className="ml-2 text-muted-foreground">· WhatsApp {c.whatsapp}</span>
+                    <span className="text-muted-foreground">· WhatsApp {c.whatsapp}</span>
+                  ) : null}
+                  {!c.envioAutomatico ? (
+                    <Badge variant="outline" className="font-normal text-muted-foreground">
+                      envio manual
+                    </Badge>
                   ) : null}
                 </span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                      aria-label={`Excluir ${c.nome}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir {c.nome}?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Isso remove o cliente e também todas as cobranças e envios ligados a ele.
-                        Não dá para desfazer.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => mExcluir.mutate(c.id)}
-                        className="bg-destructive text-white hover:bg-destructive/90"
+                <span className="flex shrink-0 items-center gap-1">
+                  <ClienteDialog
+                    cliente={c}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-foreground"
+                        aria-label={`Editar ${c.nome}`}
                       >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Pencil className="size-4" />
+                      </Button>
+                    }
+                  />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-destructive"
+                        aria-label={`Excluir ${c.nome}`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir {c.nome}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Isso remove o cliente e também todas as cobranças e envios ligados a ele.
+                          Não dá para desfazer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => mExcluir.mutate(c.id)}
+                          className="bg-destructive text-white hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </span>
               </li>
             ))}
           </ul>

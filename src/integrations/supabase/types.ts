@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           criado_em: string
           email: string
+          envio_automatico: boolean
           id: string
           nome: string
           user_id: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           criado_em?: string
           email: string
+          envio_automatico?: boolean
           id?: string
           nome: string
           user_id: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           criado_em?: string
           email?: string
+          envio_automatico?: boolean
           id?: string
           nome?: string
           user_id?: string

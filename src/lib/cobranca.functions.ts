@@ -39,6 +39,7 @@ export interface CobrancaDTO {
   cliente_nome: string;
   cliente_email: string;
   cliente_whatsapp: string;
+  cliente_envio_automatico: boolean;
   descricao: string;
   frequencia: Frequencia;
   valor: number;
@@ -54,6 +55,7 @@ export interface ClienteDTO {
   nome: string;
   email: string;
   whatsapp: string;
+  envioAutomatico: boolean;
 }
 
 export interface ProximoEnvioDTO {
@@ -82,7 +84,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
     const [clientesRes, cobrancasRes, enviosRes, perfilRes] = await Promise.all([
       supabase
         .from("clientes")
-        .select("id, nome, email, whatsapp")
+        .select("id, nome, email, whatsapp, envio_automatico")
         .eq("user_id", userId)
         .order("nome"),
       supabase
@@ -106,7 +108,13 @@ export const carregarPainel = createServerFn({ method: "GET" })
     if (cobrancasRes.error) falha("Não foi possível carregar o painel.", cobrancasRes.error);
     if (enviosRes.error) falha("Não foi possível carregar o painel.", enviosRes.error);
 
-    const clientes: ClienteDTO[] = clientesRes.data ?? [];
+    const clientes: ClienteDTO[] = (clientesRes.data ?? []).map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      email: c.email,
+      whatsapp: c.whatsapp ?? "",
+      envioAutomatico: c.envio_automatico ?? true,
+    }));
     const mapaCliente = new Map(clientes.map((c) => [c.id, c]));
     const enviosBrutos = enviosRes.data ?? [];
     const instrucoesPagamento = perfilRes.data?.instrucoes_pagamento ?? "";
@@ -123,6 +131,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
         cliente_nome: cliente?.nome ?? "—",
         cliente_email: cliente?.email ?? "",
         cliente_whatsapp: cliente?.whatsapp ?? "",
+        cliente_envio_automatico: cliente?.envioAutomatico ?? true,
         descricao: c.descricao ?? "",
         frequencia: (c.frequencia ?? "unica") as Frequencia,
         valor: Number(c.valor),
@@ -165,6 +174,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
     const proximosEnvios: ProximoEnvioDTO[] = [];
     for (const c of cobrancas) {
       if (c.status === "pago") continue;
+      if (!c.cliente_envio_automatico) continue; // cliente marcado como manual
       const lembrete = enviadoOk.has(`${c.id}:lembrete`);
       const firme = enviadoOk.has(`${c.id}:cobranca_atrasada`);
       if (!lembrete && c.vencimento > seteDiasAtras) {
@@ -249,6 +259,7 @@ const clienteSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome").max(120),
   email: z.string().trim().email("E-mail inválido").max(255),
   whatsapp: z.string().trim().max(20).optional().default(""),
+  envioAutomatico: z.boolean().optional().default(true),
 });
 
 export const criarCliente = createServerFn({ method: "POST" })
@@ -260,8 +271,27 @@ export const criarCliente = createServerFn({ method: "POST" })
       nome: data.nome,
       email: data.email.toLowerCase(),
       whatsapp: soDigitos(data.whatsapp),
+      envio_automatico: data.envioAutomatico,
     });
     if (error) falha("Não foi possível cadastrar o cliente.", error);
+    return { ok: true };
+  });
+
+export const editarCliente = createServerFn({ method: "POST" })
+  .middleware([requireUsuarioAutorizado])
+  .inputValidator((data: unknown) => clienteSchema.extend({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("clientes")
+      .update({
+        nome: data.nome,
+        email: data.email.toLowerCase(),
+        whatsapp: soDigitos(data.whatsapp),
+        envio_automatico: data.envioAutomatico,
+      })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) falha("Não foi possível salvar o cliente.", error);
     return { ok: true };
   });
 
@@ -440,7 +470,7 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
 
     const { data: clientes } = await supabase
       .from("clientes")
-      .select("id, nome, email")
+      .select("id, nome, email, envio_automatico")
       .eq("user_id", userId);
     const mapaCliente = new Map((clientes ?? []).map((c) => [c.id, c]));
 
@@ -453,6 +483,8 @@ export const rodarCobrancas = createServerFn({ method: "POST" })
 
     const pendentesDeEnvio: { cobrancaId: string; tipo: TipoEnvio }[] = [];
     for (const c of cobrancas ?? []) {
+      const cli = mapaCliente.get(c.cliente_id);
+      if (cli && cli.envio_automatico === false) continue; // cliente na mão
       const naJanelaDoLembrete = c.vencimento <= hoje && c.vencimento > seteDiasAtras;
       const atrasoFirme = c.vencimento <= seteDiasAtras;
 
