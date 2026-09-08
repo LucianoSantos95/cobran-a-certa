@@ -126,6 +126,36 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          criado_em: string
+          email: string
+          estrelas: number | null
+          id: string
+          mensagem: string | null
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          email?: string
+          estrelas?: number | null
+          id?: string
+          mensagem?: string | null
+          nome?: string
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          email?: string
+          estrelas?: number | null
+          id?: string
+          mensagem?: string | null
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       perfil_cobranca: {
         Row: {
           atualizado_em: string
@@ -141,6 +171,30 @@ export type Database = {
           atualizado_em?: string
           instrucoes_pagamento?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          criado_em: string
+          email: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          criado_em?: string
+          email?: string
+          id: string
+          nome?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          criado_em?: string
+          email?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }
