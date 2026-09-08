@@ -1,7 +1,7 @@
 /**
- * Envio de e-mails de cobrança através do e-mail gerenciado da plataforma.
+ * Envio de e-mails de cobrança pelo Resend (domínio próprio verificado).
  */
-import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { enviarTemplateResend, resendConfigurado } from "@/lib/resend.server";
 import { EMAIL_RESPOSTA } from "./acesso";
 import { diasDeAtraso } from "./datas";
 
