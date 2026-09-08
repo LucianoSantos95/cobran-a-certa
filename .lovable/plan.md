@@ -14,5 +14,5 @@ Hoje a tela de entrada já mostra o botão "Entrar com Google", mas ele usa um c
 
 - Chamar `configure_social_auth` com o provedor `google` (gera `src/integrations/lovable` e instala `@lovable.dev/cloud-auth-js`).
 - Em `src/routes/auth.tsx`, substituir `supabase.auth.signInWithOAuth` por `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin, extraParams: { prompt: "select_account" } })`, tratando `result.error` e `result.redirected`.
-- O redirecionamento aponta para a origem pública; a verificação do e-mail autorizado continua no listener de sessão já existente.
+- O redirecionamento aponta para a origem pública; remover a checagem de `EMAIL_AUTORIZADO` no listener de sessão e no formulário de e-mail/senha, bem como o `signOut` forçado para contas não autorizadas.
 - E-mail/senha permanece habilitado (não desativar o provedor `email`).
