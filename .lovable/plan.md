@@ -1,54 +1,43 @@
-# Subdomínio de envio: `cobrancadireta.appfocus.com.br`
+# Liberar o envio de e-mails: seu painel não permite registros NS
 
-## Um ponto antes de começar
+## O problema, em uma frase
 
-Consultei o DNS agora: **`appfocus.com.br` não aparece como registrado** (a consulta volta vazia direto no Registro.br). Ou seja, hoje não dá para criar um subdomínio nele.
+O envio de e-mails exige que o subdomínio seja **delegado** por dois registros do tipo **NS** — e a lista de tipos do seu painel (A, MX, AAAA, CNAME, SRV, TXT, CAA) não inclui NS. Sem NS, a verificação nunca conclui, por mais que você espere.
 
-Também conferi o `focusinteligente.com.br`, que é seu e está na Hostinger: o registro de verificação (TXT) já está publicado corretamente; **falta só a delegação NS do subdomínio** — por isso o e-mail nunca saiu. Não era um problema de escolha de nome.
+Não adianta substituir por CNAME ou A: só o NS delega a zona.
 
-Então há dois caminhos. Escolha um e eu sigo.
+## Duas saídas. Escolha uma.
 
-## Caminho A — registrar o appfocus.com.br (o nome que você quer)
+### Saída 1 — Mover o DNS do `focusinteligente.com.br` para a Cloudflare (grátis, recomendada)
 
-1. Registrar `appfocus.com.br` no Registro.br (ou em qualquer registrador brasileiro).
-2. Apontar o domínio para um provedor de DNS onde você consiga criar registros (Hostinger e Cloudflare servem).
-3. Eu cadastro `cobrancadireta.appfocus.com.br` como remetente no projeto e te passo os registros exatos.
-4. Você adiciona no painel do DNS:
-   - 1 registro **TXT** de verificação, no domínio raiz.
-   - 2 registros **NS** com o nome `cobrancadireta`, apontando para os dois servidores que eu te informar.
-5. Eu confirmo a verificação e faço o teste de envio.
+O domínio continua registrado onde está; muda só quem responde pelo DNS.
 
-Prazo: depende do registro do domínio (algumas horas) mais a propagação do DNS.
+1. Criar conta grátis na Cloudflare e clicar em **Add a site** → digitar `focusinteligente.com.br`.
+2. A Cloudflare importa sozinha os registros atuais. **Confira a lista** com o painel atual aberto ao lado, especialmente os registros de site e de e-mail (A, CNAME, MX, TXT) — se faltar algum, adicione manualmente antes de seguir.
+3. A Cloudflare mostra dois nameservers (algo como `xxx.ns.cloudflare.com`).
+4. No seu registrador atual, trocar os nameservers do domínio por esses dois.
+5. Aguardar a Cloudflare marcar o domínio como ativo (costuma levar de minutos a algumas horas).
+6. Me avisar. Eu cadastro `cobrancadireta.focusinteligente.com.br` como remetente e te passo os registros exatos — aí você adiciona na Cloudflare, que aceita NS sem problema.
 
-## Caminho B — usar o domínio que você já tem (mais rápido, hoje)
+Risco a considerar: enquanto os nameservers propagam, se algum registro não tiver sido copiado, o site ou o e-mail do domínio pode ficar fora do ar. Por isso o passo 2 é o mais importante.
 
-Usar `cobrancadireta.focusinteligente.com.br`. Passo a passo no painel da Hostinger:
+### Saída 2 — Trazer o domínio para dentro da Lovable
 
-1. Hostinger → **Domínios** → `focusinteligente.com.br` → **Zona DNS**.
-2. Adicionar **duas** linhas (eu te passo os valores exatos assim que criar o remetente no projeto):
+Transferir o registro do domínio para a Lovable (Configurações do workspace → Domínios). Com o domínio gerenciado aqui, a delegação é criada automaticamente e **você não precisa mexer em nenhum registro DNS**.
 
-| Tipo | Nome | Aponta para |
-|---|---|---|
-| NS | `cobrancadireta` | (servidor 1 que eu informar) |
-| NS | `cobrancadireta` | (servidor 2 que eu informar) |
+Contrapartida: é uma transferência de registrador, leva alguns dias e exige o código de autorização junto ao registrador atual.
 
-3. Manter o registro TXT de verificação que eu indicar (o atual já está lá).
-4. Apagar qualquer outro registro com o nome `cobrancadireta` (A, CNAME ou MX), pois conflita com a delegação.
-
-Prazo: normalmente de 15 minutos a algumas horas.
-
-## O que eu faço depois, nos dois casos
+## Depois que a delegação existir (eu faço)
 
 1. Confiro na internet se os registros já estão publicados.
 2. Confirmo a verificação do remetente no projeto.
-3. Volto os e-mails de conta para a identidade do Cobrança Certa (hoje estão no remetente padrão da plataforma).
-4. Ajusto o remetente do app para o novo endereço.
-5. Crio um cliente de teste, disparo uma cobrança real para `oluciano.dosantos@gmail.com` e confiro no histórico se saiu como enviada.
-6. Apago os dados de teste.
+3. Aponto o app para `cobrancadireta.focusinteligente.com.br` e volto os e-mails de conta para a identidade do Cobrança Certa (hoje estão no remetente padrão da plataforma).
+4. Crio um cliente de teste, disparo uma cobrança real para `oluciano.dosantos@gmail.com` e confiro no histórico se saiu como enviada.
+5. Apago os dados de teste.
 
 ## Detalhes técnicos
 
-- Consulta DNS-over-HTTPS: `appfocus.com.br` retorna NXDOMAIN com SOA de `com.br` (não delegado/não registrado); `focusinteligente.com.br` usa `ns1/ns2.dns-parking.com` (Hostinger), TXT `_lovable-email` presente e correto, `NS notify.*` ausente.
-- A plataforma delega a zona do subdomínio via NS e passa a gerenciar SPF/DKIM/MX dentro dela.
-- Ajuste de código no fim: `SENDER_DOMAIN` e `FROM_DOMAIN` em `src/lib/email-templates/send-email.ts` e as constantes equivalentes em `src/routes/lovable/email/auth/webhook.ts`.
-- Reativação dos e-mails de conta com a marca do app via `toggle_project_emails` (`enabled: true`) após a verificação.
+- Verificado por DNS-over-HTTPS: `focusinteligente.com.br` responde por `ns1/ns2.dns-parking.com` (Hostinger); o TXT `_lovable-email` já está publicado e correto; `NS notify.focusinteligente.com.br` está ausente. O editor de zona desse provedor não expõe o tipo NS, então a delegação é impossível ali.
+- A plataforma gerencia SPF/DKIM/MX dentro da zona delegada; nada disso é criado à mão.
+- Ao final, ajustar `SENDER_DOMAIN` e `FROM_DOMAIN` em `src/lib/email-templates/send-email.ts` e as constantes equivalentes em `src/routes/lovable/email/auth/webhook.ts`, além de remover o remetente `notify.*` antigo.
+- Reativar os e-mails de conta com a marca do app via `toggle_project_emails` (`enabled: true`) após a verificação.
