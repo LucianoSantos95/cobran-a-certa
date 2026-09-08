@@ -100,17 +100,9 @@ function AuthPage() {
   const [google, setGoogle] = useState(false);
 
   useEffect(() => {
-    const decidir = async (session: { user: { email?: string } } | null) => {
+    const decidir = (session: { user: { email?: string } } | null) => {
       if (!session) return;
-      const e = (session.user.email ?? "").toLowerCase();
-      if (e === EMAIL_AUTORIZADO) {
-        navigate({ to: "/" });
-      } else {
-        await supabase.auth.signOut();
-        toast.error("Acesso restrito", {
-          description: "Apenas a conta autorizada pode entrar nesta fase.",
-        });
-      }
+      navigate({ to: "/" });
     };
     supabase.auth.getSession().then(({ data }) => decidir(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => decidir(session));
@@ -120,12 +112,6 @@ function AuthPage() {
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     const normalizado = email.trim().toLowerCase();
-    if (normalizado !== EMAIL_AUTORIZADO) {
-      toast.error("Acesso restrito", {
-        description: "Nesta fase de validação apenas a conta autorizada pode entrar.",
-      });
-      return;
-    }
     setCarregando(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: normalizado,
