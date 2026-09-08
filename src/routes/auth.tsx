@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { EMAIL_AUTORIZADO } from "@/lib/acesso";
+import { lovable } from "@/integrations/lovable/index";
 
 const FLUTUANTES = [
   { Icon: QrCode, top: "12%", left: "14%", size: 72, dur: 9, delay: 0 },
@@ -130,17 +130,19 @@ function AuthPage() {
 
   async function entrarComGoogle() {
     setGoogle(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth`,
-        queryParams: { prompt: "select_account" },
-      },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+      extraParams: { prompt: "select_account" },
     });
-    if (error) {
+    if (result.error) {
       setGoogle(false);
-      toast.error("Não foi possível abrir o Google", { description: error.message });
+      toast.error("Não foi possível entrar com o Google", {
+        description: result.error.message ?? "Tente novamente em instantes.",
+      });
+      return;
     }
+    if (result.redirected) return;
+    navigate({ to: "/" });
   }
 
   return (
@@ -209,7 +211,8 @@ function AuthPage() {
           </Button>
 
           <p className="mt-6 text-xs text-muted-foreground">
-            Sem cadastro público. Apenas a conta autorizada tem acesso nesta fase.
+            Ao entrar com o Google sua conta é criada automaticamente. Você vê apenas os seus
+            próprios clientes e cobranças.
           </p>
         </div>
       </div>
