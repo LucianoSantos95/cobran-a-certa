@@ -50,7 +50,7 @@ export async function enviarEmailCobranca(dados: DadosEmailCobranca): Promise<vo
   const instrucoes = dados.instrucoesPagamento?.trim();
   const descricao = dados.descricao?.trim();
 
-  const result = await sendTemplateEmail(templateName, dados.para, {
+  await enviarTemplateResend(templateName, dados.para, {
     templateData: {
       nomeCliente: dados.nomeCliente,
       valorFormatado: formatarValor(dados.valor),
