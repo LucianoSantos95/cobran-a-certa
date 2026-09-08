@@ -1,0 +1,1 @@
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS envio_automatico boolean NOT NULL DEFAULT true;
