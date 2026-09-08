@@ -1,46 +1,54 @@
-# Liberar o subdomínio de envio de e-mails
+# Subdomínio de envio: `cobrancadireta.appfocus.com.br`
 
-## O que descobri agora
+## Um ponto antes de começar
 
-Consultei os registros do seu domínio na internet:
+Consultei o DNS agora: **`appfocus.com.br` não aparece como registrado** (a consulta volta vazia direto no Registro.br). Ou seja, hoje não dá para criar um subdomínio nele.
 
-- O registro de verificação (TXT) **já está publicado e correto**.
-- Os dois registros **NS do subdomínio `notify.focusinteligente.com.br` não existem** — é só isso que falta.
-- Seu DNS está hospedado na **Hostinger** (`ns1.dns-parking.com` / `ns2.dns-parking.com`), que permite criar registros NS.
+Também conferi o `focusinteligente.com.br`, que é seu e está na Hostinger: o registro de verificação (TXT) já está publicado corretamente; **falta só a delegação NS do subdomínio** — por isso o e-mail nunca saiu. Não era um problema de escolha de nome.
 
-Ou seja: não é preciso trocar de subdomínio nem recomeçar. Falta só um passo no painel da Hostinger.
+Então há dois caminhos. Escolha um e eu sigo.
 
-## O que você precisa fazer (5 minutos)
+## Caminho A — registrar o appfocus.com.br (o nome que você quer)
 
-1. Entre na Hostinger → **Domínios** → `focusinteligente.com.br` → **Zona DNS / Editor de DNS**.
-2. Adicione **dois** registros novos:
+1. Registrar `appfocus.com.br` no Registro.br (ou em qualquer registrador brasileiro).
+2. Apontar o domínio para um provedor de DNS onde você consiga criar registros (Hostinger e Cloudflare servem).
+3. Eu cadastro `cobrancadireta.appfocus.com.br` como remetente no projeto e te passo os registros exatos.
+4. Você adiciona no painel do DNS:
+   - 1 registro **TXT** de verificação, no domínio raiz.
+   - 2 registros **NS** com o nome `cobrancadireta`, apontando para os dois servidores que eu te informar.
+5. Eu confirmo a verificação e faço o teste de envio.
 
-| Tipo | Nome | Aponta para | TTL |
-|---|---|---|---|
-| NS | `notify` | `ns5.lovable.cloud` | 300 (ou padrão) |
-| NS | `notify` | `ns6.lovable.cloud` | 300 (ou padrão) |
+Prazo: depende do registro do domínio (algumas horas) mais a propagação do DNS.
 
-Observações importantes:
-- O campo Nome é só `notify` (a Hostinger completa o resto do domínio sozinha). Se o painel exigir o nome inteiro, use `notify.focusinteligente.com.br`.
-- São duas linhas separadas, com o mesmo nome `notify`.
-- Não apague o TXT que já está lá.
-- Se existir qualquer outro registro chamado `notify` (A, CNAME, MX), apague — ele conflita com a delegação.
+## Caminho B — usar o domínio que você já tem (mais rápido, hoje)
 
-## O que eu faço depois
+Usar `cobrancadireta.focusinteligente.com.br`. Passo a passo no painel da Hostinger:
 
-1. Confiro na internet se os dois NS já aparecem publicados.
-2. Confirmo a verificação do domínio de envio no projeto.
+1. Hostinger → **Domínios** → `focusinteligente.com.br` → **Zona DNS**.
+2. Adicionar **duas** linhas (eu te passo os valores exatos assim que criar o remetente no projeto):
+
+| Tipo | Nome | Aponta para |
+|---|---|---|
+| NS | `cobrancadireta` | (servidor 1 que eu informar) |
+| NS | `cobrancadireta` | (servidor 2 que eu informar) |
+
+3. Manter o registro TXT de verificação que eu indicar (o atual já está lá).
+4. Apagar qualquer outro registro com o nome `cobrancadireta` (A, CNAME ou MX), pois conflita com a delegação.
+
+Prazo: normalmente de 15 minutos a algumas horas.
+
+## O que eu faço depois, nos dois casos
+
+1. Confiro na internet se os registros já estão publicados.
+2. Confirmo a verificação do remetente no projeto.
 3. Volto os e-mails de conta para a identidade do Cobrança Certa (hoje estão no remetente padrão da plataforma).
-4. Crio um cliente de teste com o seu e-mail, disparo uma cobrança real para `oluciano.dosantos@gmail.com` e confiro no histórico se saiu como enviada.
-5. Apago os dados de teste no final.
-
-## Se preferir outro subdomínio
-
-Se por algum motivo você quiser usar outro nome (por exemplo `envios.focusinteligente.com.br`), me avise: eu removo o atual, crio o novo e te passo os registros correspondentes. Mas isso não é necessário — o problema atual é apenas o NS ausente.
+4. Ajusto o remetente do app para o novo endereço.
+5. Crio um cliente de teste, disparo uma cobrança real para `oluciano.dosantos@gmail.com` e confiro no histórico se saiu como enviada.
+6. Apago os dados de teste.
 
 ## Detalhes técnicos
 
-- Verificação feita por DNS-over-HTTPS: TXT `_lovable-email.focusinteligente.com.br` retorna o token esperado; `NS notify.focusinteligente.com.br` retorna NXDOMAIN/SOA da zona pai, confirmando ausência de delegação.
-- Após a delegação, a Lovable gerencia SPF/DKIM/MX dentro da zona `notify.*`.
-- Nenhuma alteração de código é necessária: `SENDER_DOMAIN` em `src/lib/email-templates/send-email.ts` já é `notify.focusinteligente.com.br`.
+- Consulta DNS-over-HTTPS: `appfocus.com.br` retorna NXDOMAIN com SOA de `com.br` (não delegado/não registrado); `focusinteligente.com.br` usa `ns1/ns2.dns-parking.com` (Hostinger), TXT `_lovable-email` presente e correto, `NS notify.*` ausente.
+- A plataforma delega a zona do subdomínio via NS e passa a gerenciar SPF/DKIM/MX dentro dela.
+- Ajuste de código no fim: `SENDER_DOMAIN` e `FROM_DOMAIN` em `src/lib/email-templates/send-email.ts` e as constantes equivalentes em `src/routes/lovable/email/auth/webhook.ts`.
 - Reativação dos e-mails de conta com a marca do app via `toggle_project_emails` (`enabled: true`) após a verificação.
