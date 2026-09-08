@@ -80,6 +80,9 @@ export function AppNav({ userId, email }: { userId: string; email: string }) {
               <DropdownMenuItem asChild>
                 <Link to="/configuracoes">Minha conta</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/suporte">Suporte</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={sair}>Sair</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -9,8 +9,10 @@ import { dataHoraSP } from "@/lib/datas";
 import { Star } from "lucide-react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MetricCard } from "@/components/metric-card";
+import { ConcluirTicketDialog } from "@/components/concluir-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -134,6 +136,8 @@ function Admin() {
 
   const usuarios = data?.usuarios ?? [];
   const feedback = data?.feedback ?? [];
+  const tickets = data?.tickets ?? [];
+  const ticketsAbertos = tickets.filter((t) => t.status === "aberto");
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -277,6 +281,61 @@ function Admin() {
           {!isLoading && feedback.length === 0 ? (
             <div className="rounded-xl border border-dashed bg-muted/40 p-6 text-center text-sm text-muted-foreground">
               Nenhum feedback recebido ainda.
+            </div>
+          ) : null}
+        </div>
+      </BlurFade>
+
+      <BlurFade inView className="mt-8 mb-4 block">
+        <h2 className="text-lg font-medium text-foreground">
+          Chamados de suporte
+          {ticketsAbertos.length > 0 ? (
+            <Badge variant="outline" className="ml-2 font-normal">
+              {ticketsAbertos.length} aberto{ticketsAbertos.length > 1 ? "s" : ""}
+            </Badge>
+          ) : null}
+        </h2>
+        <div className="mt-3 space-y-3">
+          {tickets.map((t) => (
+            <div key={t.id} className="rounded-xl border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-foreground">{t.nome}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{t.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={t.status === "concluido" ? "secondary" : "outline"}>
+                    {t.status === "concluido" ? "Concluído" : "Aberto"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{dataHoraSP(t.criadoEm)}</span>
+                </div>
+              </div>
+              <p className="mt-2 text-sm whitespace-pre-line text-foreground">{t.mensagem}</p>
+              {t.status === "concluido" && t.respostaAdmin ? (
+                <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Sua resposta</p>
+                  <p className="mt-1 text-sm whitespace-pre-line text-foreground">
+                    {t.respostaAdmin}
+                  </p>
+                </div>
+              ) : null}
+              {t.status === "aberto" ? (
+                <div className="mt-3">
+                  <ConcluirTicketDialog
+                    ticketId={t.id}
+                    trigger={
+                      <Button size="sm" variant="outline">
+                        Marcar como concluído
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {!isLoading && tickets.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+              Nenhum chamado aberto.
             </div>
           ) : null}
         </div>

@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireUsuarioAutorizado } from "./require-allowed-user";
 import { hojeSP } from "./datas";
+import type { TicketDTO } from "./tickets.functions";
+
+export type { TicketDTO };
 
 /**
  * Painel de operação (admin). Visível só para a conta autorizada — a mesma
@@ -69,6 +72,7 @@ export interface AdminDTO {
     cohort: number;
   };
   feedback: FeedbackDTO[];
+  tickets: TicketDTO[];
 }
 
 export const carregarAdmin = createServerFn({ method: "GET" })
@@ -76,30 +80,37 @@ export const carregarAdmin = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<AdminDTO> => {
     const { supabase } = context;
 
-    const [clientesRes, cobrancasRes, enviosRes, profilesRes, feedbackRes] = await Promise.all([
-      supabase.from("clientes").select("id, user_id, criado_em"),
-      supabase
-        .from("cobrancas")
-        .select("id, user_id, valor, vencimento, status, pago_em, criado_em"),
-      supabase.from("envios").select("id, user_id, cobranca_id, tipo, data_envio, status_envio"),
-      supabase.from("profiles").select("id, nome, email, criado_em"),
-      supabase
-        .from("feedback")
-        .select("id, nome, email, estrelas, mensagem, criado_em")
-        .order("criado_em", { ascending: false }),
-    ]);
+    const [clientesRes, cobrancasRes, enviosRes, profilesRes, feedbackRes, ticketsRes] =
+      await Promise.all([
+        supabase.from("clientes").select("id, user_id, criado_em"),
+        supabase
+          .from("cobrancas")
+          .select("id, user_id, valor, vencimento, status, pago_em, criado_em"),
+        supabase.from("envios").select("id, user_id, cobranca_id, tipo, data_envio, status_envio"),
+        supabase.from("profiles").select("id, nome, email, criado_em"),
+        supabase
+          .from("feedback")
+          .select("id, nome, email, estrelas, mensagem, criado_em")
+          .order("criado_em", { ascending: false }),
+        supabase
+          .from("tickets")
+          .select("id, nome, email, mensagem, status, resposta_admin, criado_em, atualizado_em")
+          .order("criado_em", { ascending: false }),
+      ]);
 
     if (clientesRes.error) falha("Não foi possível carregar a operação.", clientesRes.error);
     if (cobrancasRes.error) falha("Não foi possível carregar a operação.", cobrancasRes.error);
     if (enviosRes.error) falha("Não foi possível carregar a operação.", enviosRes.error);
     if (profilesRes.error) falha("Não foi possível carregar a operação.", profilesRes.error);
     if (feedbackRes.error) falha("Não foi possível carregar a operação.", feedbackRes.error);
+    if (ticketsRes.error) falha("Não foi possível carregar a operação.", ticketsRes.error);
 
     const clientes = clientesRes.data ?? [];
     const cobrancas = cobrancasRes.data ?? [];
     const envios = enviosRes.data ?? [];
     const profiles = profilesRes.data ?? [];
     const feedbackRows = feedbackRes.data ?? [];
+    const ticketsRows = ticketsRes.data ?? [];
 
     const agora = Date.now();
     const hoje = hojeSP();
@@ -245,6 +256,16 @@ export const carregarAdmin = createServerFn({ method: "GET" })
         estrelas: f.estrelas,
         mensagem: f.mensagem ?? "",
         criadoEm: f.criado_em,
+      })),
+      tickets: ticketsRows.map((t) => ({
+        id: t.id,
+        nome: t.nome || "—",
+        email: t.email || "—",
+        mensagem: t.mensagem,
+        status: (t.status === "concluido" ? "concluido" : "aberto") as "aberto" | "concluido",
+        respostaAdmin: t.resposta_admin,
+        criadoEm: t.criado_em,
+        atualizadoEm: t.atualizado_em,
       })),
     };
   });
