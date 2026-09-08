@@ -156,6 +156,24 @@ export type Database = {
         }
         Relationships: []
       }
+      perfil_cobranca: {
+        Row: {
+          atualizado_em: string
+          instrucoes_pagamento: string
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          instrucoes_pagamento?: string
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          instrucoes_pagamento?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -177,24 +195,6 @@ export type Database = {
           email?: string
           id?: string
           nome?: string
-        }
-        Relationships: []
-      }
-      perfil_cobranca: {
-        Row: {
-          atualizado_em: string
-          instrucoes_pagamento: string
-          user_id: string
-        }
-        Insert: {
-          atualizado_em?: string
-          instrucoes_pagamento?: string
-          user_id: string
-        }
-        Update: {
-          atualizado_em?: string
-          instrucoes_pagamento?: string
-          user_id?: string
         }
         Relationships: []
       }
