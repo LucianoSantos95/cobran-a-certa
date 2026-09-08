@@ -177,6 +177,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          criado_em: string
+          email: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          criado_em?: string
+          email?: string
+          id: string
+          nome?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          criado_em?: string
+          email?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           atualizado_em: string
@@ -210,30 +234,6 @@ export type Database = {
           resposta_admin?: string | null
           status?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          criado_em: string
-          email: string
-          id: string
-          nome: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          criado_em?: string
-          email?: string
-          id: string
-          nome?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          criado_em?: string
-          email?: string
-          id?: string
-          nome?: string
         }
         Relationships: []
       }
