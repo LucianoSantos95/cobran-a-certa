@@ -57,7 +57,7 @@ export const Route = createFileRoute("/auth")({
         name: "description",
         content: "Acesso restrito ao painel Cobrança Certa, os lembretes automáticos de pagamento.",
       },
-      { property: "og:title", content: "Entrar | Cobrança Certa" },
+      { property: "og:title", content: "Entrar no Cobrança Certa — Lembretes de cobrança" },
       {
         property: "og:description",
         content: "Acesso restrito ao painel de cobranças e lembretes automáticos.",
@@ -156,7 +156,9 @@ function AuthPage() {
             <span className="font-semibold tracking-tight">Cobrança Certa</span>
           </div>
 
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Entrar</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Entrar no Cobrança Certa
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">Acesso restrito · versão beta.</p>
 
           <form onSubmit={entrar} className="mt-6 space-y-4">
