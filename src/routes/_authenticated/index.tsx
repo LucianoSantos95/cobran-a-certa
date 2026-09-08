@@ -59,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/")({
         content:
           "Painel de cobranças por projeto: total a receber, atrasos, taxa de recuperação e lembretes automáticos por e-mail.",
       },
-      { property: "og:title", content: "Cobrança Certa" },
+      { property: "og:title", content: "Painel de Cobranças | Cobrança Certa" },
       {
         property: "og:description",
         content: "Acompanhe cobranças, atrasos e lembretes automáticos em um só painel.",
@@ -160,7 +160,9 @@ function Painel() {
     <main className="mx-auto max-w-5xl px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Painel</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Painel de Cobranças
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lembretes de pagamento para serviços pontuais.
           </p>
@@ -193,7 +195,8 @@ function Painel() {
         </BlurFade>
       ) : null}
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <h2 className="mt-8 text-lg font-medium text-foreground">Resumo financeiro</h2>
+      <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             titulo: "Total a Receber",
